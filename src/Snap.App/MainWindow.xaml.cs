@@ -1,23 +1,43 @@
-﻿using System.Text;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using Snap.App.Storage;
 
 namespace Snap.App;
 
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    private readonly CaptureVault _vault;
+    private readonly Action _beginCapture;
+
+    public MainWindow(CaptureVault vault, Action beginCapture)
     {
+        _vault = vault ?? throw new ArgumentNullException(nameof(vault));
+        _beginCapture = beginCapture ?? throw new ArgumentNullException(nameof(beginCapture));
         InitializeComponent();
+        DataContext = this;
+    }
+
+    public ObservableCollection<CapturePreview> Captures { get; } = [];
+
+    public void RefreshCaptures()
+    {
+        Captures.Clear();
+        foreach (var filePath in _vault.GetCaptures())
+        {
+            Captures.Add(CapturePreview.Load(filePath));
+        }
+    }
+
+    private void OnStartCaptureClick(object sender, RoutedEventArgs e)
+    {
+        Hide();
+        _beginCapture();
+    }
+
+    private void OnClosing(object? sender, CancelEventArgs e)
+    {
+        e.Cancel = true;
+        Hide();
     }
 }

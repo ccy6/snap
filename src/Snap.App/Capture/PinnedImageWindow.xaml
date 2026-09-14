@@ -1,0 +1,17 @@
+<Window x:Class="Snap.App.Capture.PinnedImageWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent"
+        AllowsTransparency="True"
+        MouseLeftButtonDown="OnMouseLeftButtonDown"
+        MouseWheel="OnMouseWheel"
+        MouseRightButtonUp="OnMouseRightButtonUp">
+    <Border BorderBrush="#33000000" BorderThickness="1" Background="White">
+        <Image x:Name="PinnedImage" Stretch="Uniform" MaxWidth="900" MaxHeight="700" />
+    </Border>
+</Window>
