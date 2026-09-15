@@ -9,6 +9,9 @@
         WindowStartupLocation="CenterScreen"
         Background="#FFF5F5F5"
         Closing="OnClosing">
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="72" />
@@ -56,12 +59,30 @@
                                         Background="White"
                                         BorderBrush="#FFE4E4E4"
                                         BorderThickness="1">
+                                    <Border.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <MenuItem Header="复制" CommandParameter="{Binding}" Click="OnCopyCaptureClick" />
+                                            <MenuItem Header="另存为…" CommandParameter="{Binding}" Click="OnSaveCaptureClick" />
+                                            <MenuItem Header="钉到桌面" CommandParameter="{Binding}" Click="OnPinCaptureClick" />
+                                            <Separator />
+                                            <MenuItem Header="保留 / 取消保留" CommandParameter="{Binding}" Click="OnToggleKeepClick" />
+                                            <MenuItem Header="删除" CommandParameter="{Binding}" Click="OnDeleteCaptureClick" />
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
                                     <Grid>
                                         <Grid.RowDefinitions>
                                             <RowDefinition Height="*" />
                                             <RowDefinition Height="26" />
                                         </Grid.RowDefinitions>
                                         <Image Source="{Binding Image}" Stretch="Uniform" />
+                                        <Border HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                Padding="6,2"
+                                                CornerRadius="8"
+                                                Background="#E607C160"
+                                                Visibility="{Binding IsKept, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                            <TextBlock Text="保留" Foreground="White" FontSize="11" />
+                                        </Border>
                                         <TextBlock Grid.Row="1"
                                                    Text="{Binding CreatedLabel}"
                                                    VerticalAlignment="Bottom"

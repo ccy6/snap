@@ -22,11 +22,20 @@
             <Rectangle x:Name="RightShade" Fill="#8A000000" />
             <Rectangle x:Name="BottomShade" Fill="#8A000000" />
 
+            <Canvas x:Name="AnnotationCanvas"
+                    Visibility="Collapsed"
+                    Background="Transparent"
+                    ClipToBounds="True"
+                    MouseLeftButtonDown="OnAnnotationMouseLeftButtonDown"
+                    MouseMove="OnAnnotationMouseMove"
+                    MouseLeftButtonUp="OnAnnotationMouseLeftButtonUp" />
+
             <Border x:Name="SelectionBorder"
                     Visibility="Collapsed"
                     BorderBrush="#07C160"
                     BorderThickness="2"
-                    Background="Transparent" />
+                    Background="Transparent"
+                    IsHitTestVisible="False" />
 
             <Border x:Name="SizeBadge"
                     Visibility="Collapsed"
@@ -45,6 +54,15 @@
                     <DropShadowEffect BlurRadius="14" ShadowDepth="3" Opacity="0.3" />
                 </Border.Effect>
                 <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolButton}" Content="□" Tag="Rectangle" ToolTip="矩形" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="○" Tag="Ellipse" ToolTip="椭圆" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="☺" Tag="Emoji" ToolTip="表情" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="↗" Tag="Arrow" ToolTip="箭头" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="✎" Tag="Pen" ToolTip="画笔" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="▦" Tag="Mosaic" ToolTip="遮挡" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="T" Tag="Text" ToolTip="文字" Click="OnToolClick" />
+                    <Button Style="{StaticResource ToolButton}" Content="⇳" ToolTip="滚动长截图（即将接入）" IsEnabled="False" />
+                    <Button Style="{StaticResource ToolButton}" Content="↶" ToolTip="撤销" Click="OnUndoClick" />
                     <Button Style="{StaticResource ToolButton}" Content="⇩" ToolTip="保存" Click="OnSaveClick" />
                     <Button Style="{StaticResource ToolButton}" Content="⚑" ToolTip="钉图" Click="OnPinClick" />
                     <Rectangle Width="1" Height="24" Fill="#FFE1E1E1" Margin="5,0" />

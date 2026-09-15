@@ -11,6 +11,10 @@ using Snap.Core.Capture;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfPoint = System.Windows.Point;
+using WpfEllipse = System.Windows.Shapes.Ellipse;
+using WpfLine = System.Windows.Shapes.Line;
+using WpfPolyline = System.Windows.Shapes.Polyline;
+using WpfRectangle = System.Windows.Shapes.Rectangle;
 
 namespace Snap.App.Capture;
 
@@ -18,13 +22,23 @@ public partial class CaptureOverlayWindow : Window
 {
     private readonly CaptureVault _vault;
     private readonly CapturedDesktop _desktop;
+    private readonly WindowSelectionService _windowSelectionService;
+    private readonly UndoHistory<UIElement> _undoHistory = new();
     private WpfPoint _startPoint;
+    private WpfPoint _annotationStart;
     private Rect _selection;
+    private Rect _clickCandidate;
     private bool _isSelecting;
+    private AnnotationTool _activeTool;
+    private FrameworkElement? _activeAnnotation;
 
-    public CaptureOverlayWindow(ScreenCaptureService captureService, CaptureVault vault)
+    public CaptureOverlayWindow(
+        ScreenCaptureService captureService,
+        WindowSelectionService windowSelectionService,
+        CaptureVault vault)
     {
         ArgumentNullException.ThrowIfNull(captureService);
+        _windowSelectionService = windowSelectionService ?? throw new ArgumentNullException(nameof(windowSelectionService));
         _vault = vault ?? throw new ArgumentNullException(nameof(vault));
         _desktop = captureService.Capture();
 
@@ -34,7 +48,11 @@ public partial class CaptureOverlayWindow : Window
         Top = _desktop.VirtualBounds.Top;
         Width = _desktop.VirtualBounds.Width;
         Height = _desktop.VirtualBounds.Height;
-        Loaded += (_, _) => Activate();
+        Loaded += (_, _) =>
+        {
+            ResetSelection();
+            Activate();
+        };
     }
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -51,6 +69,7 @@ public partial class CaptureOverlayWindow : Window
         }
 
         _startPoint = e.GetPosition(OverlayCanvas);
+        _clickCandidate = _selection;
         _selection = Rect.Empty;
         _isSelecting = true;
         ActionBar.Visibility = Visibility.Collapsed;
@@ -65,6 +84,12 @@ public partial class CaptureOverlayWindow : Window
         if (_isSelecting)
         {
             UpdateSelection(e.GetPosition(OverlayCanvas));
+            return;
+        }
+
+        if (_activeTool is AnnotationTool.None && ActionBar.Visibility is Visibility.Collapsed)
+        {
+            UpdateWindowCandidate(e.GetPosition(OverlayCanvas));
         }
     }
 
@@ -80,8 +105,16 @@ public partial class CaptureOverlayWindow : Window
         UpdateSelection(e.GetPosition(OverlayCanvas));
         if (_selection.Width < 2 || _selection.Height < 2)
         {
-            ResetSelection();
-            return;
+            if (!_clickCandidate.IsEmpty)
+            {
+                _selection = _clickCandidate;
+                ApplySelectionBounds();
+            }
+            else
+            {
+                ResetSelection();
+                return;
+            }
         }
 
         PositionActionBar();
@@ -106,7 +139,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
-        var image = CreateCrop();
+        var image = CreateResultImage();
         if (image is null)
         {
             return;
@@ -128,7 +161,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnPinClick(object sender, RoutedEventArgs e)
     {
-        var image = CreateCrop();
+        var image = CreateResultImage();
         if (image is null)
         {
             return;
@@ -141,7 +174,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void CompleteCapture()
     {
-        var image = CreateCrop();
+        var image = CreateResultImage();
         if (image is null)
         {
             return;
@@ -152,7 +185,7 @@ public partial class CaptureOverlayWindow : Window
         Close();
     }
 
-    private CroppedBitmap? CreateCrop()
+    private BitmapSource? CreateResultImage()
     {
         if (_selection.IsEmpty || ActualWidth <= 0 || ActualHeight <= 0)
         {
@@ -171,7 +204,214 @@ public partial class CaptureOverlayWindow : Window
 
         var crop = new CroppedBitmap(_desktop.Image, source);
         crop.Freeze();
-        return crop;
+        if (AnnotationCanvas.Children.Count == 0)
+        {
+            return crop;
+        }
+
+        AnnotationCanvas.Measure(new Size(_selection.Width, _selection.Height));
+        AnnotationCanvas.Arrange(new Rect(0, 0, _selection.Width, _selection.Height));
+        AnnotationCanvas.UpdateLayout();
+
+        var annotations = new RenderTargetBitmap(
+            source.Width,
+            source.Height,
+            96 * scaleX,
+            96 * scaleY,
+            PixelFormats.Pbgra32);
+        annotations.Render(AnnotationCanvas);
+        annotations.Freeze();
+
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+        {
+            var bounds = new Rect(0, 0, source.Width, source.Height);
+            context.DrawImage(crop, bounds);
+            context.DrawImage(annotations, bounds);
+        }
+
+        var result = new RenderTargetBitmap(source.Width, source.Height, 96, 96, PixelFormats.Pbgra32);
+        result.Render(drawing);
+        result.Freeze();
+        return result;
+    }
+
+    private void OnToolClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string toolName } && Enum.TryParse(toolName, out AnnotationTool tool))
+        {
+            _activeTool = tool;
+            AnnotationCanvas.Cursor = tool is AnnotationTool.Text ? Cursors.IBeam : Cursors.Cross;
+        }
+    }
+
+    private void OnUndoClick(object sender, RoutedEventArgs e)
+    {
+        if (_undoHistory.TryPop(out var item) && item is not null)
+        {
+            AnnotationCanvas.Children.Remove(item);
+        }
+    }
+
+    private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_activeTool is AnnotationTool.None)
+        {
+            return;
+        }
+
+        _annotationStart = e.GetPosition(AnnotationCanvas);
+        _activeAnnotation = CreateAnnotation(_activeTool, _annotationStart);
+        if (_activeAnnotation is null)
+        {
+            return;
+        }
+
+        AnnotationCanvas.Children.Add(_activeAnnotation);
+        if (_activeTool is AnnotationTool.Text or AnnotationTool.Emoji)
+        {
+            _undoHistory.Push(_activeAnnotation);
+            _activeAnnotation = null;
+        }
+        else
+        {
+            AnnotationCanvas.CaptureMouse();
+        }
+
+        e.Handled = true;
+    }
+
+    private void OnAnnotationMouseMove(object sender, WpfMouseEventArgs e)
+    {
+        if (_activeAnnotation is null || e.LeftButton is not MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        UpdateAnnotation(_activeAnnotation, e.GetPosition(AnnotationCanvas));
+        e.Handled = true;
+    }
+
+    private void OnAnnotationMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (_activeAnnotation is null)
+        {
+            return;
+        }
+
+        UpdateAnnotation(_activeAnnotation, e.GetPosition(AnnotationCanvas));
+        AnnotationCanvas.ReleaseMouseCapture();
+        _undoHistory.Push(_activeAnnotation);
+        _activeAnnotation = null;
+        e.Handled = true;
+    }
+
+    private FrameworkElement? CreateAnnotation(AnnotationTool tool, WpfPoint point)
+    {
+        var stroke = new SolidColorBrush(Color.FromRgb(250, 76, 76));
+        switch (tool)
+        {
+            case AnnotationTool.Rectangle:
+                return PlaceAt(new WpfRectangle
+                {
+                    Stroke = stroke,
+                    StrokeThickness = 3,
+                    Fill = Brushes.Transparent,
+                }, point);
+            case AnnotationTool.Ellipse:
+                return PlaceAt(new WpfEllipse
+                {
+                    Stroke = stroke,
+                    StrokeThickness = 3,
+                    Fill = Brushes.Transparent,
+                }, point);
+            case AnnotationTool.Arrow:
+                return new WpfLine
+                {
+                    X1 = point.X,
+                    Y1 = point.Y,
+                    X2 = point.X,
+                    Y2 = point.Y,
+                    Stroke = stroke,
+                    StrokeThickness = 4,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Triangle,
+                };
+            case AnnotationTool.Pen:
+                var pen = new WpfPolyline
+                {
+                    Stroke = stroke,
+                    StrokeThickness = 4,
+                    StrokeLineJoin = PenLineJoin.Round,
+                    StrokeStartLineCap = PenLineCap.Round,
+                    StrokeEndLineCap = PenLineCap.Round,
+                };
+                pen.Points.Add(point);
+                return pen;
+            case AnnotationTool.Mosaic:
+                var cover = new WpfPolyline
+                {
+                    Stroke = new SolidColorBrush(Color.FromArgb(230, 115, 115, 115)),
+                    StrokeThickness = 22,
+                    StrokeLineJoin = PenLineJoin.Round,
+                    StrokeStartLineCap = PenLineCap.Square,
+                    StrokeEndLineCap = PenLineCap.Square,
+                };
+                cover.Points.Add(point);
+                return cover;
+            case AnnotationTool.Text:
+                var textBox = PlaceAt(new TextBox
+                {
+                    MinWidth = 80,
+                    FontSize = 20,
+                    Foreground = stroke,
+                    Background = Brushes.Transparent,
+                    BorderThickness = new Thickness(0),
+                    AcceptsReturn = true,
+                }, point);
+                textBox.Focus();
+                return textBox;
+            case AnnotationTool.Emoji:
+                return PlaceAt(new TextBlock
+                {
+                    Text = "🙂",
+                    FontFamily = new FontFamily("Segoe UI Emoji"),
+                    FontSize = 36,
+                }, point);
+            default:
+                return null;
+        }
+    }
+
+    private static T PlaceAt<T>(T element, WpfPoint point) where T : FrameworkElement
+    {
+        Canvas.SetLeft(element, point.X);
+        Canvas.SetTop(element, point.Y);
+        return element;
+    }
+
+    private void UpdateAnnotation(FrameworkElement element, WpfPoint current)
+    {
+        if (element is WpfLine line)
+        {
+            line.X2 = current.X;
+            line.Y2 = current.Y;
+            return;
+        }
+
+        if (element is WpfPolyline polyline)
+        {
+            polyline.Points.Add(current);
+            return;
+        }
+
+        var rectangle = SelectionGeometry.FromPoints(
+            new PixelPoint(_annotationStart.X, _annotationStart.Y),
+            new PixelPoint(current.X, current.Y));
+        Canvas.SetLeft(element, rectangle.X);
+        Canvas.SetTop(element, rectangle.Y);
+        element.Width = rectangle.Width;
+        element.Height = rectangle.Height;
     }
 
     private static void SaveImage(BitmapSource image, string filePath)
@@ -194,12 +434,46 @@ public partial class CaptureOverlayWindow : Window
             new PixelRect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight));
         _selection = new Rect(clamped.X, clamped.Y, clamped.Width, clamped.Height);
 
+        ApplySelectionBounds();
+    }
+
+    private void ApplySelectionBounds()
+    {
         SetBounds(SelectionBorder, _selection.X, _selection.Y, _selection.Width, _selection.Height);
+        SetBounds(AnnotationCanvas, _selection.X, _selection.Y, _selection.Width, _selection.Height);
+        AnnotationCanvas.Visibility = ActionBar.Visibility is Visibility.Visible
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         SizeText.Text = $"{Math.Round(_selection.Width):0} × {Math.Round(_selection.Height):0}";
         SizeBadge.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
         Canvas.SetLeft(SizeBadge, _selection.X);
         Canvas.SetTop(SizeBadge, Math.Max(0, _selection.Y - SizeBadge.DesiredSize.Height - 5));
         UpdateShade();
+    }
+
+    private void UpdateWindowCandidate(WpfPoint localPoint)
+    {
+        var screenPoint = new PixelPoint(
+            localPoint.X + _desktop.VirtualBounds.Left,
+            localPoint.Y + _desktop.VirtualBounds.Top);
+        var window = _windowSelectionService.FindTopLevelWindowAt(screenPoint, (uint)Environment.ProcessId);
+        if (window is null)
+        {
+            return;
+        }
+
+        var local = new PixelRect(
+            window.Value.X - _desktop.VirtualBounds.Left,
+            window.Value.Y - _desktop.VirtualBounds.Top,
+            window.Value.Width,
+            window.Value.Height);
+        var clamped = SelectionGeometry.Clamp(
+            local,
+            new PixelRect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight));
+        _selection = new Rect(clamped.X, clamped.Y, clamped.Width, clamped.Height);
+        SelectionBorder.Visibility = Visibility.Visible;
+        SizeBadge.Visibility = Visibility.Visible;
+        ApplySelectionBounds();
     }
 
     private void UpdateShade()
@@ -238,6 +512,8 @@ public partial class CaptureOverlayWindow : Window
     {
         _selection = Rect.Empty;
         SelectionBorder.Visibility = Visibility.Collapsed;
+        AnnotationCanvas.Visibility = Visibility.Collapsed;
+        AnnotationCanvas.Children.Clear();
         SizeBadge.Visibility = Visibility.Collapsed;
         ActionBar.Visibility = Visibility.Collapsed;
         SetBounds(TopShade, 0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight);

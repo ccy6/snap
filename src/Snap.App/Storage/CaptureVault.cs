@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows.Media.Imaging;
+using Microsoft.VisualBasic.FileIO;
+using Snap.Core.Storage;
 
 namespace Snap.App.Storage;
 
@@ -35,8 +37,56 @@ public sealed class CaptureVault
         }
 
         return Directory
-            .EnumerateFiles(_directoryPath, "*.png", SearchOption.TopDirectoryOnly)
+            .EnumerateFiles(_directoryPath, "*.png", System.IO.SearchOption.TopDirectoryOnly)
             .OrderByDescending(File.GetCreationTime)
             .ToArray();
     }
+
+    public bool IsKept(string filePath) => File.Exists(GetKeepMarkerPath(filePath));
+
+    public void SetKept(string filePath, bool isKept)
+    {
+        var markerPath = GetKeepMarkerPath(filePath);
+        if (isKept)
+        {
+            File.WriteAllText(markerPath, string.Empty);
+        }
+        else
+        {
+            File.Delete(markerPath);
+        }
+    }
+
+    public void Delete(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            FileSystem.DeleteFile(
+                filePath,
+                UIOption.OnlyErrorDialogs,
+                RecycleOption.SendToRecycleBin,
+                UICancelOption.DoNothing);
+        }
+
+        File.Delete(GetKeepMarkerPath(filePath));
+    }
+
+    public void Cleanup(RetentionPeriod retentionPeriod)
+    {
+        var now = DateTimeOffset.Now;
+        foreach (var filePath in GetCaptures())
+        {
+            var capture = new CaptureItem(
+                Guid.Empty,
+                filePath,
+                new DateTimeOffset(File.GetCreationTimeUtc(filePath), TimeSpan.Zero),
+                IsKept(filePath));
+            if (RetentionPolicy.ShouldDelete(capture, retentionPeriod, now, TimeZoneInfo.Local))
+            {
+                Delete(filePath);
+            }
+        }
+    }
+
+    private static string GetKeepMarkerPath(string filePath) => $"{filePath}.keep";
 }

@@ -26,6 +26,7 @@ public partial class App : System.Windows.Application
             "Captures");
         var settings = AppSettings.CreateDefault();
         var vault = new CaptureVault(captureDirectory);
+        vault.Cleanup(settings.RetentionPeriod);
 
         _mainWindow = new MainWindow(vault, BeginCapture);
         _hotkeyService = new GlobalHotkeyService();
@@ -82,7 +83,10 @@ public partial class App : System.Windows.Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Snap",
             "Captures");
-        _captureWindow = new CaptureOverlayWindow(new ScreenCaptureService(), new CaptureVault(captureDirectory));
+        _captureWindow = new CaptureOverlayWindow(
+            new ScreenCaptureService(),
+            new WindowSelectionService(),
+            new CaptureVault(captureDirectory));
         _captureWindow.Closed += (_, _) => _captureWindow = null;
         _captureWindow.Show();
     }

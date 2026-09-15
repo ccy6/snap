@@ -3,9 +3,9 @@ using System.Windows.Media.Imaging;
 
 namespace Snap.App;
 
-public sealed record CapturePreview(BitmapSource Image, string FilePath, string CreatedLabel)
+public sealed record CapturePreview(BitmapSource Image, string FilePath, string CreatedLabel, bool IsKept)
 {
-    public static CapturePreview Load(string filePath)
+    public static CapturePreview Load(string filePath, bool isKept)
     {
         var image = new BitmapImage();
         image.BeginInit();
@@ -16,6 +16,6 @@ public sealed record CapturePreview(BitmapSource Image, string FilePath, string 
         image.Freeze();
 
         var createdAt = File.GetCreationTime(filePath);
-        return new CapturePreview(image, filePath, createdAt.ToString("MM-dd HH:mm:ss"));
+        return new CapturePreview(image, filePath, createdAt.ToString("MM-dd HH:mm:ss"), isKept);
     }
 }
