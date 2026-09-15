@@ -40,7 +40,7 @@
             </Grid>
         </Border>
 
-        <TabControl Grid.Row="1" Margin="20" Background="Transparent" BorderThickness="0">
+        <TabControl x:Name="MainTabs" Grid.Row="1" Margin="20" Background="Transparent" BorderThickness="0">
             <TabItem Header="截图台">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,16,0,0">
                     <ItemsControl ItemsSource="{Binding Captures}">
@@ -105,14 +105,32 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="开始截图" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="Alt + Q" FontWeight="SemiBold" />
+                            <StackPanel>
+                                <TextBlock Text="开始截图" VerticalAlignment="Center" />
+                                <TextBlock Text="点击右侧后，直接按下新的组合键" Margin="0,4,0,0"
+                                           FontSize="12" Foreground="#FF888888" />
+                            </StackPanel>
+                            <TextBox x:Name="CaptureHotkeyBox"
+                                     Grid.Column="1"
+                                     Width="150"
+                                     Height="34"
+                                     Padding="9,6"
+                                     IsReadOnly="True"
+                                     Cursor="Hand"
+                                     TextAlignment="Center"
+                                     FontWeight="SemiBold"
+                                     PreviewKeyDown="OnCaptureHotkeyPreviewKeyDown"
+                                     GotKeyboardFocus="OnCaptureHotkeyGotFocus"
+                                     LostKeyboardFocus="OnCaptureHotkeyLostFocus" />
                         </Grid>
                     </Border>
 
                     <TextBlock Text="自动清理" FontSize="18" FontWeight="SemiBold" />
                     <Border Margin="0,12" Padding="16" CornerRadius="8" Background="White">
-                        <ComboBox Width="170" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBox x:Name="RetentionComboBox"
+                                  Width="170"
+                                  HorizontalAlignment="Left"
+                                  SelectionChanged="OnRetentionSelectionChanged">
                             <ComboBoxItem Content="每天清理" />
                             <ComboBoxItem Content="保留 7 天" />
                             <ComboBoxItem Content="保留 30 天" />

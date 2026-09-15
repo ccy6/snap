@@ -23,6 +23,8 @@ public sealed partial class GlobalHotkeyService : IDisposable
 
     public event EventHandler? Pressed;
 
+    public bool IsRegistered => _isRegistered;
+
     public bool Register(HotkeyGesture hotkey)
     {
         ArgumentNullException.ThrowIfNull(hotkey);
@@ -42,7 +44,7 @@ public sealed partial class GlobalHotkeyService : IDisposable
         _messageWindow.Dispose();
     }
 
-    private void Unregister()
+    public void Unregister()
     {
         if (!_isRegistered)
         {

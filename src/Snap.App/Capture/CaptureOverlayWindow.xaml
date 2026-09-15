@@ -37,6 +37,17 @@
                     Background="Transparent"
                     IsHitTestVisible="False" />
 
+            <Canvas x:Name="SelectionHandles" Visibility="Collapsed">
+                <Thumb Tag="TopLeft" Cursor="SizeNWSE" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="Top" Cursor="SizeNS" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="TopRight" Cursor="SizeNESW" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="Right" Cursor="SizeWE" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="BottomRight" Cursor="SizeNWSE" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="Bottom" Cursor="SizeNS" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="BottomLeft" Cursor="SizeNESW" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+                <Thumb Tag="Left" Cursor="SizeWE" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+            </Canvas>
+
             <Border x:Name="SizeBadge"
                     Visibility="Collapsed"
                     Padding="7,3"
@@ -74,6 +85,19 @@
     </Grid>
 
     <Window.Resources>
+        <Style x:Key="SelectionHandleStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Background" Value="#FF07C160" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="ToolButton" TargetType="Button">
             <Setter Property="Width" Value="38" />
             <Setter Property="Height" Value="34" />

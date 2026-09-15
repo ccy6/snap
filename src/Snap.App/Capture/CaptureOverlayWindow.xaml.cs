@@ -29,6 +29,8 @@ public partial class CaptureOverlayWindow : Window
     private Rect _selection;
     private Rect _clickCandidate;
     private bool _isSelecting;
+    private bool _isMovingSelection;
+    private Rect _moveStartSelection;
     private AnnotationTool _activeTool;
     private FrameworkElement? _activeAnnotation;
 
@@ -63,7 +65,8 @@ public partial class CaptureOverlayWindow : Window
             return;
         }
 
-        if (FindParent<ButtonBase>(e.OriginalSource as DependencyObject) is not null)
+        if (FindParent<ButtonBase>(e.OriginalSource as DependencyObject) is not null ||
+            FindParent<Thumb>(e.OriginalSource as DependencyObject) is not null)
         {
             return;
         }
@@ -73,6 +76,8 @@ public partial class CaptureOverlayWindow : Window
         _selection = Rect.Empty;
         _isSelecting = true;
         ActionBar.Visibility = Visibility.Collapsed;
+        AnnotationCanvas.Visibility = Visibility.Collapsed;
+        SelectionHandles.Visibility = Visibility.Collapsed;
         SelectionBorder.Visibility = Visibility.Visible;
         SizeBadge.Visibility = Visibility.Visible;
         OverlayCanvas.CaptureMouse();
@@ -119,10 +124,17 @@ public partial class CaptureOverlayWindow : Window
 
         PositionActionBar();
         ActionBar.Visibility = Visibility.Visible;
+        AnnotationCanvas.Visibility = Visibility.Visible;
+        SelectionHandles.Visibility = Visibility.Visible;
     }
 
     private void OnKeyDown(object sender, WpfKeyEventArgs e)
     {
+        if (e.OriginalSource is TextBox)
+        {
+            return;
+        }
+
         if (e.Key is Key.Escape)
         {
             Close();
@@ -257,6 +269,19 @@ public partial class CaptureOverlayWindow : Window
     {
         if (_activeTool is AnnotationTool.None)
         {
+            if (e.ClickCount == 2)
+            {
+                CompleteCapture();
+                e.Handled = true;
+                return;
+            }
+
+            _isMovingSelection = true;
+            _startPoint = e.GetPosition(OverlayCanvas);
+            _moveStartSelection = _selection;
+            ActionBar.Visibility = Visibility.Collapsed;
+            AnnotationCanvas.CaptureMouse();
+            e.Handled = true;
             return;
         }
 
@@ -268,6 +293,12 @@ public partial class CaptureOverlayWindow : Window
         }
 
         AnnotationCanvas.Children.Add(_activeAnnotation);
+        if (_activeAnnotation is TextBox textBox)
+        {
+            textBox.Focus();
+            Keyboard.Focus(textBox);
+        }
+
         if (_activeTool is AnnotationTool.Text or AnnotationTool.Emoji)
         {
             _undoHistory.Push(_activeAnnotation);
@@ -283,6 +314,21 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseMove(object sender, WpfMouseEventArgs e)
     {
+        if (_isMovingSelection && e.LeftButton is MouseButtonState.Pressed)
+        {
+            var current = e.GetPosition(OverlayCanvas);
+            var bounds = new PixelRect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight);
+            var moved = SelectionAdjustment.Move(
+                ToPixelRect(_moveStartSelection),
+                current.X - _startPoint.X,
+                current.Y - _startPoint.Y,
+                bounds);
+            _selection = ToRect(moved);
+            ApplySelectionBounds();
+            e.Handled = true;
+            return;
+        }
+
         if (_activeAnnotation is null || e.LeftButton is not MouseButtonState.Pressed)
         {
             return;
@@ -294,6 +340,16 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isMovingSelection)
+        {
+            _isMovingSelection = false;
+            AnnotationCanvas.ReleaseMouseCapture();
+            PositionActionBar();
+            ActionBar.Visibility = Visibility.Visible;
+            e.Handled = true;
+            return;
+        }
+
         if (_activeAnnotation is null)
         {
             return;
@@ -369,7 +425,6 @@ public partial class CaptureOverlayWindow : Window
                     BorderThickness = new Thickness(0),
                     AcceptsReturn = true,
                 }, point);
-                textBox.Focus();
                 return textBox;
             case AnnotationTool.Emoji:
                 return PlaceAt(new TextBlock
@@ -441,6 +496,8 @@ public partial class CaptureOverlayWindow : Window
     {
         SetBounds(SelectionBorder, _selection.X, _selection.Y, _selection.Width, _selection.Height);
         SetBounds(AnnotationCanvas, _selection.X, _selection.Y, _selection.Width, _selection.Height);
+        SetBounds(SelectionHandles, _selection.X, _selection.Y, _selection.Width, _selection.Height);
+        PositionSelectionHandles();
         AnnotationCanvas.Visibility = ActionBar.Visibility is Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -472,6 +529,7 @@ public partial class CaptureOverlayWindow : Window
             new PixelRect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight));
         _selection = new Rect(clamped.X, clamped.Y, clamped.Width, clamped.Height);
         SelectionBorder.Visibility = Visibility.Visible;
+        SelectionHandles.Visibility = Visibility.Collapsed;
         SizeBadge.Visibility = Visibility.Visible;
         ApplySelectionBounds();
     }
@@ -512,6 +570,7 @@ public partial class CaptureOverlayWindow : Window
     {
         _selection = Rect.Empty;
         SelectionBorder.Visibility = Visibility.Collapsed;
+        SelectionHandles.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Children.Clear();
         SizeBadge.Visibility = Visibility.Collapsed;
@@ -529,6 +588,57 @@ public partial class CaptureOverlayWindow : Window
         element.Width = Math.Max(0, width);
         element.Height = Math.Max(0, height);
     }
+
+    private void OnSelectionHandleDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (sender is not Thumb { Tag: string handleName } ||
+            !Enum.TryParse(handleName, out SelectionHandle handle))
+        {
+            return;
+        }
+
+        ActionBar.Visibility = Visibility.Collapsed;
+        var resized = SelectionAdjustment.Resize(
+            ToPixelRect(_selection),
+            handle,
+            e.HorizontalChange,
+            e.VerticalChange,
+            new PixelRect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight),
+            minimumSize: 8);
+        _selection = ToRect(resized);
+        ApplySelectionBounds();
+        PositionActionBar();
+        ActionBar.Visibility = Visibility.Visible;
+    }
+
+    private void PositionSelectionHandles()
+    {
+        const double half = 5;
+        var positions = new[]
+        {
+            new WpfPoint(-half, -half),
+            new WpfPoint(_selection.Width / 2 - half, -half),
+            new WpfPoint(_selection.Width - half, -half),
+            new WpfPoint(_selection.Width - half, _selection.Height / 2 - half),
+            new WpfPoint(_selection.Width - half, _selection.Height - half),
+            new WpfPoint(_selection.Width / 2 - half, _selection.Height - half),
+            new WpfPoint(-half, _selection.Height - half),
+            new WpfPoint(-half, _selection.Height / 2 - half),
+        };
+
+        for (var index = 0; index < SelectionHandles.Children.Count && index < positions.Length; index++)
+        {
+            if (SelectionHandles.Children[index] is FrameworkElement handle)
+            {
+                Canvas.SetLeft(handle, positions[index].X);
+                Canvas.SetTop(handle, positions[index].Y);
+            }
+        }
+    }
+
+    private static PixelRect ToPixelRect(Rect value) => new(value.X, value.Y, value.Width, value.Height);
+
+    private static Rect ToRect(PixelRect value) => new(value.X, value.Y, value.Width, value.Height);
 
     private static T? FindParent<T>(DependencyObject? source) where T : DependencyObject
     {

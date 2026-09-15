@@ -36,6 +36,19 @@ public sealed class JsonSettingsStoreTests : IDisposable
         Assert.Equal(expected, result);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenFileIsInvalid_ReturnsDefaults()
+    {
+        Directory.CreateDirectory(_directoryPath);
+        var filePath = Path.Join(_directoryPath, "settings.json");
+        await File.WriteAllTextAsync(filePath, "{ this is not json }");
+        var store = new JsonSettingsStore(filePath);
+
+        var result = await store.LoadAsync(CancellationToken.None);
+
+        Assert.Equal(AppSettings.CreateDefault(), result);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_directoryPath))

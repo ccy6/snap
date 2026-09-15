@@ -24,8 +24,15 @@ public sealed class JsonSettingsStore
             return AppSettings.CreateDefault();
         }
 
-        var json = await File.ReadAllTextAsync(_filePath, cancellationToken).ConfigureAwait(false);
-        return JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions) ?? AppSettings.CreateDefault();
+        try
+        {
+            var json = await File.ReadAllTextAsync(_filePath, cancellationToken).ConfigureAwait(false);
+            return JsonSerializer.Deserialize<AppSettings>(json, SerializerOptions) ?? AppSettings.CreateDefault();
+        }
+        catch (JsonException)
+        {
+            return AppSettings.CreateDefault();
+        }
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
