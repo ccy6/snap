@@ -34,6 +34,7 @@ public partial class CaptureOverlayWindow : Window
     private Button? _activeToolButton;
     private Color _annotationColor = Color.FromRgb(250, 81, 81);
     private double _strokeThickness = 4;
+    private ArrowAnnotationState? _selectedArrow;
 
     public CaptureOverlayWindow(
         ScreenCaptureService captureService,
@@ -80,6 +81,7 @@ public partial class CaptureOverlayWindow : Window
         ToolOptionsBar.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         SelectionHandles.Visibility = Visibility.Collapsed;
+        DeselectArrow();
         SelectionBorder.Visibility = Visibility.Visible;
         SizeBadge.Visibility = Visibility.Visible;
         OverlayCanvas.CaptureMouse();
@@ -240,6 +242,10 @@ public partial class CaptureOverlayWindow : Window
             _activeToolButton = (Button)sender;
             _activeToolButton.Background = new SolidColorBrush(Color.FromRgb(228, 241, 234));
             _activeTool = tool;
+            if (tool is not AnnotationTool.Arrow)
+            {
+                DeselectArrow();
+            }
             AnnotationCanvas.Cursor = tool is AnnotationTool.Text ? Cursors.IBeam : Cursors.Cross;
             ToolOptionsBar.Visibility = tool is AnnotationTool.Rectangle or AnnotationTool.Ellipse or
                 AnnotationTool.Arrow or AnnotationTool.Pen or AnnotationTool.Text
@@ -266,6 +272,10 @@ public partial class CaptureOverlayWindow : Window
 
         button.Background = new SolidColorBrush(Color.FromRgb(236, 236, 236));
         button.BorderBrush = new SolidColorBrush(Color.FromRgb(207, 207, 207));
+        if (_selectedArrow is not null)
+        {
+            _selectedArrow.Path.Fill = new SolidColorBrush(color);
+        }
     }
 
     private void OnStrokeSizeClick(object sender, RoutedEventArgs e)
@@ -284,6 +294,11 @@ public partial class CaptureOverlayWindow : Window
         if (thickness <= 2) ThinSizeDot.Fill = active;
         else if (thickness <= 4) MediumSizeDot.Fill = active;
         else ThickSizeDot.Fill = active;
+        if (_selectedArrow is not null)
+        {
+            _selectedArrow.ShaftWidth = thickness;
+            UpdateArrowVisual(_selectedArrow);
+        }
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
@@ -291,6 +306,10 @@ public partial class CaptureOverlayWindow : Window
         if (_undoHistory.TryPop(out var item) && item is not null)
         {
             AnnotationCanvas.Children.Remove(item);
+            if (_selectedArrow?.Path == item)
+            {
+                DeselectArrow();
+            }
         }
 
         UndoButton.IsEnabled = _undoHistory.Count > 0;
@@ -301,6 +320,13 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (FindParent<WpfPath>(e.OriginalSource as DependencyObject) is { Tag: ArrowAnnotationState arrow })
+        {
+            SelectArrow(arrow);
+            e.Handled = true;
+            return;
+        }
+
         if (_activeTool is AnnotationTool.None)
         {
             if (e.ClickCount == 2)
@@ -393,6 +419,11 @@ public partial class CaptureOverlayWindow : Window
         UpdateAnnotation(_activeAnnotation, e.GetPosition(AnnotationCanvas));
         AnnotationCanvas.ReleaseMouseCapture();
         _undoHistory.Push(_activeAnnotation);
+        if (_activeAnnotation is WpfPath { Tag: ArrowAnnotationState arrow })
+        {
+            SelectArrow(arrow);
+        }
+
         UndoButton.IsEnabled = true;
         _activeAnnotation = null;
         e.Handled = true;
@@ -418,11 +449,7 @@ public partial class CaptureOverlayWindow : Window
                     Fill = Brushes.Transparent,
                 }, point);
             case AnnotationTool.Arrow:
-                return new WpfPath
-                {
-                    Data = CreateArrowGeometry(point, point),
-                    Fill = stroke,
-                };
+                return CreateArrowAnnotation(point, stroke);
             case AnnotationTool.Pen:
                 var pen = new WpfPolyline
                 {
@@ -473,9 +500,10 @@ public partial class CaptureOverlayWindow : Window
 
     private void UpdateAnnotation(FrameworkElement element, WpfPoint current)
     {
-        if (element is WpfPath arrow)
+        if (element is WpfPath { Tag: ArrowAnnotationState arrow })
         {
-            arrow.Data = CreateArrowGeometry(_annotationStart, current);
+            arrow.End = current;
+            UpdateArrowVisual(arrow);
             return;
         }
 
@@ -500,14 +528,23 @@ public partial class CaptureOverlayWindow : Window
         element.Height = rectangle.Height;
     }
 
-    private Geometry CreateArrowGeometry(WpfPoint start, WpfPoint end)
+    private WpfPath CreateArrowAnnotation(WpfPoint point, Brush fill)
+    {
+        var path = new WpfPath { Fill = fill };
+        var state = new ArrowAnnotationState(path, point, point, _strokeThickness);
+        path.Tag = state;
+        UpdateArrowVisual(state);
+        return path;
+    }
+
+    private static Geometry CreateArrowGeometry(WpfPoint start, WpfPoint end, double shaftWidth)
     {
         var polygon = ArrowGeometry.CalculateFilledArrow(
             new PixelPoint(start.X, start.Y),
             new PixelPoint(end.X, end.Y),
-            shaftWidth: _strokeThickness,
+            shaftWidth,
             headLength: 18,
-            headWidth: 12 + _strokeThickness);
+            headWidth: 12 + shaftWidth);
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {
@@ -520,6 +557,15 @@ public partial class CaptureOverlayWindow : Window
         }
 
         return geometry;
+    }
+
+    private void UpdateArrowVisual(ArrowAnnotationState arrow)
+    {
+        arrow.Path.Data = CreateArrowGeometry(arrow.Start, arrow.End, arrow.ShaftWidth);
+        if (_selectedArrow == arrow)
+        {
+            PositionArrowHandles();
+        }
     }
 
     private BitmapSource CreatePixelatedSelection()
@@ -571,7 +617,9 @@ public partial class CaptureOverlayWindow : Window
         SetBounds(SelectionBorder, _selection.X, _selection.Y, _selection.Width, _selection.Height);
         SetBounds(AnnotationCanvas, _selection.X, _selection.Y, _selection.Width, _selection.Height);
         SetBounds(SelectionHandles, _selection.X, _selection.Y, _selection.Width, _selection.Height);
+        SetBounds(ArrowEditCanvas, _selection.X, _selection.Y, _selection.Width, _selection.Height);
         PositionSelectionHandles();
+        PositionArrowHandles();
         AnnotationCanvas.Visibility = ActionBar.Visibility is Visibility.Visible
             ? Visibility.Visible
             : Visibility.Collapsed;
@@ -667,6 +715,7 @@ public partial class CaptureOverlayWindow : Window
         SelectionHandles.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Children.Clear();
+        DeselectArrow();
         SizeBadge.Visibility = Visibility.Collapsed;
         ActionBar.Visibility = Visibility.Collapsed;
         ToolOptionsBar.Visibility = Visibility.Collapsed;
@@ -704,6 +753,58 @@ public partial class CaptureOverlayWindow : Window
         ApplySelectionBounds();
         PositionActionBar();
         ActionBar.Visibility = Visibility.Visible;
+    }
+
+    private void OnArrowHandleDragDelta(object sender, DragDeltaEventArgs e)
+    {
+        if (_selectedArrow is null || sender is not Thumb { Tag: string endpoint })
+        {
+            return;
+        }
+
+        var current = endpoint == "Start" ? _selectedArrow.Start : _selectedArrow.End;
+        var updated = new WpfPoint(
+            Math.Clamp(current.X + e.HorizontalChange, 0, AnnotationCanvas.ActualWidth),
+            Math.Clamp(current.Y + e.VerticalChange, 0, AnnotationCanvas.ActualHeight));
+        if (endpoint == "Start")
+        {
+            _selectedArrow.Start = updated;
+        }
+        else
+        {
+            _selectedArrow.End = updated;
+        }
+
+        UpdateArrowVisual(_selectedArrow);
+    }
+
+    private void SelectArrow(ArrowAnnotationState arrow)
+    {
+        _selectedArrow = arrow;
+        ArrowEditCanvas.Visibility = Visibility.Visible;
+        ToolOptionsBar.Visibility = Visibility.Visible;
+        PositionArrowHandles();
+        PositionToolOptionsBar();
+    }
+
+    private void DeselectArrow()
+    {
+        _selectedArrow = null;
+        ArrowEditCanvas.Visibility = Visibility.Collapsed;
+    }
+
+    private void PositionArrowHandles()
+    {
+        if (_selectedArrow is null)
+        {
+            return;
+        }
+
+        const double half = 6;
+        Canvas.SetLeft(ArrowStartHandle, _selectedArrow.Start.X - half);
+        Canvas.SetTop(ArrowStartHandle, _selectedArrow.Start.Y - half);
+        Canvas.SetLeft(ArrowEndHandle, _selectedArrow.End.X - half);
+        Canvas.SetTop(ArrowEndHandle, _selectedArrow.End.Y - half);
     }
 
     private void PositionSelectionHandles()
@@ -748,5 +849,20 @@ public partial class CaptureOverlayWindow : Window
         }
 
         return null;
+    }
+
+    private sealed class ArrowAnnotationState(
+        WpfPath path,
+        WpfPoint start,
+        WpfPoint end,
+        double shaftWidth)
+    {
+        public WpfPath Path { get; } = path;
+
+        public WpfPoint Start { get; set; } = start;
+
+        public WpfPoint End { get; set; } = end;
+
+        public double ShaftWidth { get; set; } = shaftWidth;
     }
 }

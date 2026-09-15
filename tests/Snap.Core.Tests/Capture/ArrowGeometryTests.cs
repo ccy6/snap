@@ -5,7 +5,7 @@ namespace Snap.Core.Tests.Capture;
 public sealed class ArrowGeometryTests
 {
     [Fact]
-    public void CalculateFilledArrow_ForHorizontalArrow_ReturnsWechatStylePolygon()
+    public void CalculateFilledArrow_ForHorizontalArrow_TapersFromTailToHead()
     {
         var result = ArrowGeometry.CalculateFilledArrow(
             new PixelPoint(0, 0),
@@ -16,13 +16,13 @@ public sealed class ArrowGeometryTests
 
         Assert.Equal(
             [
-                new PixelPoint(0, 2),
+                new PixelPoint(0, 0.5),
                 new PixelPoint(12, 2),
                 new PixelPoint(12, 5),
                 new PixelPoint(20, 0),
                 new PixelPoint(12, -5),
                 new PixelPoint(12, -2),
-                new PixelPoint(0, -2),
+                new PixelPoint(0, -0.5),
             ],
             result.Points);
     }

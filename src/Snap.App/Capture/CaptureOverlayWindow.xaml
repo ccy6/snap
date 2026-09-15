@@ -23,6 +23,18 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ArrowEndpointStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Height" Value="12" />
+            <Setter Property="Cursor" Value="SizeAll" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="White" Stroke="#FFB8B8B8" StrokeThickness="1.2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style x:Key="ToolButton" TargetType="Button">
             <Setter Property="Width" Value="44" />
             <Setter Property="Height" Value="40" />
@@ -118,6 +130,11 @@
                 <Thumb Tag="Bottom" Cursor="SizeNS" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
                 <Thumb Tag="BottomLeft" Cursor="SizeNESW" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
                 <Thumb Tag="Left" Cursor="SizeWE" Style="{StaticResource SelectionHandleStyle}" DragDelta="OnSelectionHandleDragDelta" />
+            </Canvas>
+
+            <Canvas x:Name="ArrowEditCanvas" Visibility="Collapsed">
+                <Thumb x:Name="ArrowStartHandle" Tag="Start" Style="{StaticResource ArrowEndpointStyle}" DragDelta="OnArrowHandleDragDelta" />
+                <Thumb x:Name="ArrowEndHandle" Tag="End" Style="{StaticResource ArrowEndpointStyle}" DragDelta="OnArrowHandleDragDelta" />
             </Canvas>
 
             <Border x:Name="SizeBadge"

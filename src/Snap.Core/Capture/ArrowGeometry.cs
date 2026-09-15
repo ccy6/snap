@@ -25,6 +25,7 @@ public static class ArrowGeometry
         var sizeScale = effectiveHeadLength / headLength;
         var effectiveShaftWidth = shaftWidth * Math.Max(0.55, sizeScale);
         var effectiveHeadWidth = headWidth * Math.Max(0.55, sizeScale);
+        var effectiveTailWidth = effectiveShaftWidth * 0.25;
         var unitX = deltaX / length;
         var unitY = deltaY / length;
         var perpendicularX = -unitY;
@@ -37,13 +38,13 @@ public static class ArrowGeometry
 
         return new ArrowPolygon(
         [
-            Offset(start.X, start.Y, effectiveShaftWidth / 2),
+            Offset(start.X, start.Y, effectiveTailWidth / 2),
             Offset(baseX, baseY, effectiveShaftWidth / 2),
             Offset(baseX, baseY, effectiveHeadWidth / 2),
             end,
             Offset(baseX, baseY, -effectiveHeadWidth / 2),
             Offset(baseX, baseY, -effectiveShaftWidth / 2),
-            Offset(start.X, start.Y, -effectiveShaftWidth / 2),
+            Offset(start.X, start.Y, -effectiveTailWidth / 2),
         ]);
     }
 
