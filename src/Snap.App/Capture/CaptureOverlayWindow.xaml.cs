@@ -247,7 +247,12 @@ public partial class CaptureOverlayWindow : Window
         {
             AnnotationCanvas.Children.Remove(item);
         }
+
+        UndoButton.IsEnabled = _undoHistory.Count > 0;
     }
+
+    private void OnUnavailableToolClick(object sender, RoutedEventArgs e) =>
+        MessageBox.Show(this, "滚动长截图将在后续版本开放。", "Snap", MessageBoxButton.OK, MessageBoxImage.Information);
 
     private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -286,6 +291,7 @@ public partial class CaptureOverlayWindow : Window
         if (_activeTool is AnnotationTool.Text or AnnotationTool.Emoji)
         {
             _undoHistory.Push(_activeAnnotation);
+            UndoButton.IsEnabled = true;
             _activeAnnotation = null;
         }
         else
@@ -342,6 +348,7 @@ public partial class CaptureOverlayWindow : Window
         UpdateAnnotation(_activeAnnotation, e.GetPosition(AnnotationCanvas));
         AnnotationCanvas.ReleaseMouseCapture();
         _undoHistory.Push(_activeAnnotation);
+        UndoButton.IsEnabled = true;
         _activeAnnotation = null;
         e.Handled = true;
     }

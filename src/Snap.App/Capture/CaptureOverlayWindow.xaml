@@ -24,7 +24,7 @@
             </Setter>
         </Style>
         <Style x:Key="ToolButton" TargetType="Button">
-            <Setter Property="Width" Value="42" />
+            <Setter Property="Width" Value="44" />
             <Setter Property="Height" Value="40" />
             <Setter Property="Margin" Value="2,0" />
             <Setter Property="Background" Value="Transparent" />
@@ -45,7 +45,7 @@
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#FFE3E3E3" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.38" />
+                                <Setter Property="Opacity" Value="0.55" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -102,51 +102,52 @@
 
             <Border x:Name="ActionBar"
                     Visibility="Collapsed"
-                    Padding="10,9"
-                    CornerRadius="10"
+                    Padding="6,3"
+                    CornerRadius="9"
                     Background="#FFFAFAFA"
                     BorderBrush="#14000000"
                     BorderThickness="1">
                 <Border.Effect>
-                    <DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.28" />
+                    <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.24" />
                 </Border.Effect>
                 <StackPanel Orientation="Horizontal">
                     <Button Style="{StaticResource ToolButton}" Tag="Rectangle" ToolTip="矩形" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M4,4 L20,4 20,20 4,20 Z" Stroke="#FF262626" StrokeThickness="2" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Rectangle Canvas.Left="4" Canvas.Top="4" Width="16" Height="16" RadiusX="1" RadiusY="1" Stroke="#FF595959" StrokeThickness="1.8" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Ellipse" ToolTip="椭圆" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Ellipse Canvas.Left="3" Canvas.Top="3" Width="18" Height="18" Stroke="#FF262626" StrokeThickness="2" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Ellipse Canvas.Left="3.5" Canvas.Top="3.5" Width="17" Height="17" Stroke="#FF595959" StrokeThickness="1.8" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Emoji" ToolTip="表情" Click="OnToolClick">
-                        <Viewbox Width="24" Height="24"><Canvas Width="24" Height="24"><Ellipse Canvas.Left="3" Canvas.Top="3" Width="18" Height="18" Stroke="#FF262626" StrokeThickness="2" /><Ellipse Canvas.Left="7.5" Canvas.Top="8" Width="1.8" Height="2.4" Fill="#FF262626" /><Ellipse Canvas.Left="14.7" Canvas.Top="8" Width="1.8" Height="2.4" Fill="#FF262626" /><Path Data="M7.5,14 C9,18 15,18 16.5,14" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Ellipse Canvas.Left="3.5" Canvas.Top="3.5" Width="17" Height="17" Stroke="#FF595959" StrokeThickness="1.8" /><Ellipse Canvas.Left="7.7" Canvas.Top="8" Width="1.7" Height="2.2" Fill="#FF595959" /><Ellipse Canvas.Left="14.6" Canvas.Top="8" Width="1.7" Height="2.2" Fill="#FF595959" /><Path Data="M7.7,13.8 C9.2,17.5 14.8,17.5 16.3,13.8" Stroke="#FF595959" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Fill="Transparent" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Arrow" ToolTip="箭头" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M5,19 L19,5 M10.5,5 L19,5 19,13.5" Stroke="#FF262626" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M5.5,18.5 L18.5,5.5 M10.5,5.5 L18.5,5.5 18.5,13.5" Stroke="#FF595959" StrokeThickness="1.9" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Pen" ToolTip="画笔" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M4,20 L8.5,19 19.3,8.2 C20.2,7.3 20.2,5.9 19.3,5 L19,4.7 C18.1,3.8 16.7,3.8 15.8,4.7 L5,15.5 Z M13.8,6.7 L17.3,10.2" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M4.5,19.5 L8.5,18.7 19,8.2 C19.9,7.3 19.9,6 19,5.1 L18.9,5 C18,4.1 16.7,4.1 15.8,5 L5.3,15.5 Z M13.8,7 L17,10.2" Stroke="#FF595959" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Mosaic" ToolTip="马赛克" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M4,4 L10,4 10,10 4,10 Z M14,4 L20,4 20,10 14,10 Z M4,14 L10,14 10,20 4,20 Z M14,14 L20,14 20,20 14,20 Z" Fill="#FF262626" /><Path Data="M10,10 L14,10 14,14 10,14 Z M4,10 L8,10 8,14 4,14 Z M16,10 L20,10 20,14 16,14 Z M10,4 L14,4 14,8 10,8 Z M10,16 L14,16 14,20 10,20 Z" Fill="#FF9A9A9A" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Rectangle Canvas.Left="3.8" Canvas.Top="3.8" Width="16.4" Height="16.4" RadiusX="1" RadiusY="1" Stroke="#FF595959" StrokeThickness="1.6" /><Path Data="M6,6 L10,6 10,10 6,10 Z M14,6 L18,6 18,10 14,10 Z M10,10 L14,10 14,14 10,14 Z M6,14 L10,14 10,18 6,18 Z M14,14 L18,14 18,18 14,18 Z" Fill="#FF595959" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" Tag="Text" ToolTip="文字" Click="OnToolClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M5,4 L19,4 19,20 5,20 Z M8,8 L16,8 M12,8 L12,17 M9.5,17 L14.5,17" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Rectangle Canvas.Left="4.5" Canvas.Top="4.5" Width="15" Height="15" RadiusX="1" RadiusY="1" Stroke="#FF595959" StrokeThickness="1.6" /><Path Data="M8,8 L16,8 M12,8 L12,17 M9.5,17 L14.5,17" Stroke="#FF595959" StrokeThickness="1.7" StrokeStartLineCap="Round" /></Canvas></Viewbox>
                     </Button>
-                    <Button Style="{StaticResource ToolButton}" ToolTip="滚动长截图（即将接入）" IsEnabled="False">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M6,3 L3,3 3,7 M18,3 L21,3 21,7 M6,21 L3,21 3,17 M18,21 L21,21 21,17 M12,5 L12,19 M8.5,8.5 L12,5 15.5,8.5 M8.5,15.5 L12,19 15.5,15.5" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
+                    <Rectangle Width="1" Height="46" Fill="#FFE0E0E0" Margin="4,-3" />
+                    <Button Style="{StaticResource ToolButton}" ToolTip="滚动长截图（暂未开放）" Click="OnUnavailableToolClick">
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M6,3.5 L3.5,3.5 3.5,7 M18,3.5 L20.5,3.5 20.5,7 M6,20.5 L3.5,20.5 3.5,17 M18,20.5 L20.5,20.5 20.5,17 M12,5.5 L12,18.5 M8.8,9 L12,5.5 15.2,9 M8.8,15 L12,18.5 15.2,15" Stroke="#FF595959" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
                     </Button>
-                    <Button Style="{StaticResource ToolButton}" ToolTip="撤销" Click="OnUndoClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M9,7 L4,12 9,17 M5,12 L13.5,12 C17.5,12 20,14.2 20,18" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
+                    <Rectangle Width="1" Height="46" Fill="#FFE0E0E0" Margin="4,-3" />
+                    <Button x:Name="UndoButton" Style="{StaticResource ToolButton}" ToolTip="撤销" Click="OnUndoClick" IsEnabled="False">
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M9,7 L4.5,11.5 9,16 M5,11.5 L13.5,11.5 C17.5,11.5 19.5,13.7 19.5,17.5" Stroke="#FF595959" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
                     </Button>
-                    <Rectangle Width="1" Height="25" Fill="#FFE2E2E2" Margin="5,0" />
                     <Button Style="{StaticResource ToolButton}" ToolTip="钉到桌面" Click="OnPinClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M8,4 L16,4 M9,4 L9.5,10 7,13 17,13 14.5,10 15,4 M12,13 L12,21" Stroke="#FF262626" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M8,4 L16,4 M9,4 L9.5,10 7.2,13 16.8,13 14.5,10 15,4 M12,13 L12,20.5" Stroke="#FF595959" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" ToolTip="取消" Click="OnCancelClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M5,5 L19,19 M19,5 L5,19" Stroke="#FFFF3B30" StrokeThickness="2.5" StrokeStartLineCap="Round" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M5,5 L19,19 M19,5 L5,19" Stroke="#FFFA5151" StrokeThickness="2" StrokeStartLineCap="Round" /></Canvas></Viewbox>
                     </Button>
                     <Button Style="{StaticResource ToolButton}" ToolTip="完成" Click="OnDoneClick">
-                        <Viewbox Width="23" Height="23"><Canvas Width="24" Height="24"><Path Data="M4,12.5 L9.5,18 20,6" Stroke="#FF07C160" StrokeThickness="2.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
+                        <Viewbox Width="22" Height="22"><Canvas Width="24" Height="24"><Path Data="M4,12.5 L9.5,18 20,6" Stroke="#FF00C375" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" /></Canvas></Viewbox>
                     </Button>
                 </StackPanel>
             </Border>
