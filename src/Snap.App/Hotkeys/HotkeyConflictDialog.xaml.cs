@@ -7,7 +7,6 @@ public enum HotkeyConflictChoice
 {
     CloseSnap,
     ChangeHotkey,
-    Dormant,
 }
 
 public partial class HotkeyConflictDialog : Window
@@ -23,8 +22,6 @@ public partial class HotkeyConflictDialog : Window
     private void OnCloseSnapClick(object sender, RoutedEventArgs e) => Complete(HotkeyConflictChoice.CloseSnap);
 
     private void OnChangeClick(object sender, RoutedEventArgs e) => Complete(HotkeyConflictChoice.ChangeHotkey);
-
-    private void OnDormantClick(object sender, RoutedEventArgs e) => Complete(HotkeyConflictChoice.Dormant);
 
     private void Complete(HotkeyConflictChoice choice)
     {

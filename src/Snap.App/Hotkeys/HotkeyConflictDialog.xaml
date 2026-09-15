@@ -25,12 +25,11 @@
             </StackPanel>
         </StackPanel>
         <TextBlock Grid.Row="1" Margin="54,18,0,0" TextWrapping="Wrap" Foreground="#FF555555"
-                   Text="可能是微信或其他软件正在使用这个快捷键。你可以关闭 Snap、更换快捷键，或者让 Snap 暂时休眠并在快捷键空闲后静默恢复。" />
+                   Text="可能是微信或其他软件正在使用这个快捷键。Snap 不会在后台自动重试，请关闭 Snap 或更换一个快捷键。" />
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Width="82" Height="34" Margin="0,0,8,0" Content="关闭 Snap" Click="OnCloseSnapClick" />
-            <Button Width="92" Height="34" Margin="0,0,8,0" Content="更改快捷键" Click="OnChangeClick" />
-            <Button Width="104" Height="34" Content="暂时休眠" Background="#FF07C160" Foreground="White"
-                    BorderThickness="0" Click="OnDormantClick" />
+            <Button Width="104" Height="34" Content="更改快捷键" Background="#FF07C160" Foreground="White"
+                    BorderThickness="0" Click="OnChangeClick" />
         </StackPanel>
     </Grid>
 </Window>

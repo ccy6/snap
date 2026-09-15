@@ -1,7 +1,6 @@
 using System.Drawing;
 using System.IO;
 using System.Windows;
-using System.Windows.Threading;
 using Forms = System.Windows.Forms;
 using Snap.App.Capture;
 using Snap.App.Hotkeys;
@@ -21,7 +20,6 @@ public partial class App : System.Windows.Application
     private CaptureVault? _vault;
     private JsonSettingsStore? _settingsStore;
     private AppSettings _settings = AppSettings.CreateDefault();
-    private DispatcherTimer? _hotkeyRetryTimer;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -45,7 +43,7 @@ public partial class App : System.Windows.Application
             ChangeRetentionAsync);
 
         if (!_hotkeyService.Register(_settings.CaptureHotkey) &&
-            !await ResolveHotkeyConflictAsync(_settings.CaptureHotkey, canRestorePrevious: false))
+            !ResolveHotkeyConflict(_settings.CaptureHotkey, canRestorePrevious: false))
         {
             return;
         }
@@ -68,7 +66,6 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _hotkeyRetryTimer?.Stop();
         if (_notifyIcon is not null)
         {
             _notifyIcon.Visible = false;
@@ -138,10 +135,9 @@ public partial class App : System.Windows.Application
         }
 
         var previousHotkey = _settings.CaptureHotkey;
-        StopHotkeyRetry();
         if (!_hotkeyService.Register(hotkey))
         {
-            return await ResolveHotkeyConflictAsync(hotkey, canRestorePrevious: true, previousHotkey);
+            return ResolveHotkeyConflict(hotkey, canRestorePrevious: true, previousHotkey);
         }
 
         _settings = _settings with { CaptureHotkey = hotkey };
@@ -163,7 +159,7 @@ public partial class App : System.Windows.Application
         _mainWindow?.RefreshCaptures();
     }
 
-    private async Task<bool> ResolveHotkeyConflictAsync(
+    private bool ResolveHotkeyConflict(
         HotkeyGesture hotkey,
         bool canRestorePrevious,
         HotkeyGesture? previousHotkey = null)
@@ -186,41 +182,8 @@ public partial class App : System.Windows.Application
                 _mainWindow?.OpenSettings();
                 return !canRestorePrevious;
 
-            case HotkeyConflictChoice.Dormant:
-                _settings = _settings with { CaptureHotkey = hotkey };
-                if (_settingsStore is not null)
-                {
-                    await _settingsStore.SaveAsync(_settings);
-                }
-
-                _mainWindow?.UpdateSettings(_settings);
-                StartHotkeyRetry();
-                return true;
-
             default:
                 return false;
-        }
-    }
-
-    private void StartHotkeyRetry()
-    {
-        _hotkeyService?.Unregister();
-        _hotkeyRetryTimer ??= new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromSeconds(2),
-        };
-        _hotkeyRetryTimer.Tick -= OnHotkeyRetryTick;
-        _hotkeyRetryTimer.Tick += OnHotkeyRetryTick;
-        _hotkeyRetryTimer.Start();
-    }
-
-    private void StopHotkeyRetry() => _hotkeyRetryTimer?.Stop();
-
-    private void OnHotkeyRetryTick(object? sender, EventArgs e)
-    {
-        if (_hotkeyService?.Register(_settings.CaptureHotkey) is true)
-        {
-            StopHotkeyRetry();
         }
     }
 }

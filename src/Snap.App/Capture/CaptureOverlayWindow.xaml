@@ -9,6 +9,45 @@
         Topmost="True"
         Cursor="Cross"
         KeyDown="OnKeyDown">
+    <Window.Resources>
+        <Style x:Key="SelectionHandleStyle" TargetType="Thumb">
+            <Setter Property="Width" Value="10" />
+            <Setter Property="Height" Value="10" />
+            <Setter Property="Background" Value="#FF07C160" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ToolButton" TargetType="Button">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Margin" Value="2,0" />
+            <Setter Property="FontSize" Value="22" />
+            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" CornerRadius="5" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFEAEAEA" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
     <Grid>
         <Image x:Name="DesktopImage" Stretch="Fill" IsHitTestVisible="False" />
 
@@ -84,43 +123,4 @@
         </Canvas>
     </Grid>
 
-    <Window.Resources>
-        <Style x:Key="SelectionHandleStyle" TargetType="Thumb">
-            <Setter Property="Width" Value="10" />
-            <Setter Property="Height" Value="10" />
-            <Setter Property="Background" Value="#FF07C160" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Thumb">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="2" />
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="ToolButton" TargetType="Button">
-            <Setter Property="Width" Value="38" />
-            <Setter Property="Height" Value="34" />
-            <Setter Property="Margin" Value="2,0" />
-            <Setter Property="FontSize" Value="22" />
-            <Setter Property="FontFamily" Value="Segoe UI Symbol" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="ButtonBorder" CornerRadius="5" Background="{TemplateBinding Background}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFEAEAEA" />
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
 </Window>
