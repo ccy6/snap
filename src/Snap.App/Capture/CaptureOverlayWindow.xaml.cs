@@ -34,6 +34,8 @@ public partial class CaptureOverlayWindow : Window
     private Button? _activeToolButton;
     private Color _annotationColor = Color.FromRgb(250, 81, 81);
     private double _strokeThickness = 4;
+    private TextSize _textSize = TextSize.Small;
+    private TextBox? _selectedText;
     private ArrowAnnotationState? _selectedArrow;
     private bool _isMovingArrow;
     private WpfPoint _arrowMoveStart;
@@ -255,6 +257,12 @@ public partial class CaptureOverlayWindow : Window
             {
                 DeselectArrow();
             }
+            if (tool is not AnnotationTool.Text)
+            {
+                _selectedText = null;
+            }
+
+            ShowSizeOptionsForTool(tool);
             AnnotationCanvas.Cursor = tool is AnnotationTool.Text ? Cursors.IBeam : Cursors.Cross;
             ToolOptionsBar.Visibility = tool is AnnotationTool.Rectangle or AnnotationTool.Ellipse or
                 AnnotationTool.Arrow or AnnotationTool.Pen or AnnotationTool.Text
@@ -308,6 +316,34 @@ public partial class CaptureOverlayWindow : Window
             _selectedArrow.ShaftWidth = thickness;
             UpdateArrowVisual(_selectedArrow);
         }
+    }
+
+    private void OnTextSizeClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string sizeText } || !Enum.TryParse(sizeText, out TextSize size))
+        {
+            return;
+        }
+
+        _textSize = size;
+        var inactive = new SolidColorBrush(Color.FromRgb(163, 163, 163));
+        foreach (var button in TextSizePanel.Children.OfType<Button>())
+        {
+            button.Foreground = inactive;
+        }
+
+        ((Button)sender).Foreground = new SolidColorBrush(Color.FromRgb(7, 193, 96));
+        if (_selectedText is not null)
+        {
+            _selectedText.FontSize = TextSizing.ToFontSize(size);
+        }
+    }
+
+    private void ShowSizeOptionsForTool(AnnotationTool tool)
+    {
+        var isText = tool is AnnotationTool.Text;
+        StrokeSizePanel.Visibility = isText ? Visibility.Collapsed : Visibility.Visible;
+        TextSizePanel.Visibility = isText ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
@@ -510,12 +546,14 @@ public partial class CaptureOverlayWindow : Window
                 var textBox = PlaceAt(new TextBox
                 {
                     MinWidth = 80,
-                    FontSize = 20,
+                    FontSize = TextSizing.ToFontSize(_textSize),
                     Foreground = stroke,
                     Background = Brushes.Transparent,
                     BorderThickness = new Thickness(0),
                     AcceptsReturn = true,
                 }, point);
+                textBox.GotKeyboardFocus += OnTextBoxGotKeyboardFocus;
+                _selectedText = textBox;
                 return textBox;
             case AnnotationTool.Emoji:
                 return PlaceAt(new TextBlock
@@ -823,11 +861,21 @@ public partial class CaptureOverlayWindow : Window
 
     private void SelectArrow(ArrowAnnotationState arrow)
     {
+        _selectedText = null;
         _selectedArrow = arrow;
         ArrowEditCanvas.Visibility = Visibility.Visible;
         ToolOptionsBar.Visibility = Visibility.Visible;
+        ShowSizeOptionsForTool(AnnotationTool.Arrow);
         PositionArrowHandles();
         PositionToolOptionsBar();
+    }
+
+    private void OnTextBoxGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (sender is TextBox textBox)
+        {
+            _selectedText = textBox;
+        }
     }
 
     private void DeleteSelectedArrow()
