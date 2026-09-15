@@ -10,7 +10,7 @@ using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfPoint = System.Windows.Point;
 using WpfEllipse = System.Windows.Shapes.Ellipse;
-using WpfLine = System.Windows.Shapes.Line;
+using WpfPath = System.Windows.Shapes.Path;
 using WpfPolyline = System.Windows.Shapes.Polyline;
 using WpfRectangle = System.Windows.Shapes.Rectangle;
 
@@ -373,16 +373,15 @@ public partial class CaptureOverlayWindow : Window
                     Fill = Brushes.Transparent,
                 }, point);
             case AnnotationTool.Arrow:
-                return new WpfLine
+                return new WpfPath
                 {
-                    X1 = point.X,
-                    Y1 = point.Y,
-                    X2 = point.X,
-                    Y2 = point.Y,
+                    Data = CreateArrowGeometry(point, point),
                     Stroke = stroke,
                     StrokeThickness = 4,
                     StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Triangle,
+                    StrokeEndLineCap = PenLineCap.Round,
+                    StrokeLineJoin = PenLineJoin.Round,
+                    Fill = stroke,
                 };
             case AnnotationTool.Pen:
                 var pen = new WpfPolyline
@@ -396,16 +395,12 @@ public partial class CaptureOverlayWindow : Window
                 pen.Points.Add(point);
                 return pen;
             case AnnotationTool.Mosaic:
-                var cover = new WpfPolyline
-                {
-                    Stroke = new SolidColorBrush(Color.FromArgb(230, 115, 115, 115)),
-                    StrokeThickness = 22,
-                    StrokeLineJoin = PenLineJoin.Round,
-                    StrokeStartLineCap = PenLineCap.Square,
-                    StrokeEndLineCap = PenLineCap.Square,
-                };
-                cover.Points.Add(point);
-                return cover;
+                var mosaic = new MosaicStrokeElement(
+                    CreatePixelatedSelection(),
+                    _selection.Width,
+                    _selection.Height);
+                mosaic.AddPoint(point);
+                return mosaic;
             case AnnotationTool.Text:
                 var textBox = PlaceAt(new TextBox
                 {
@@ -438,10 +433,15 @@ public partial class CaptureOverlayWindow : Window
 
     private void UpdateAnnotation(FrameworkElement element, WpfPoint current)
     {
-        if (element is WpfLine line)
+        if (element is WpfPath arrow)
         {
-            line.X2 = current.X;
-            line.Y2 = current.Y;
+            arrow.Data = CreateArrowGeometry(_annotationStart, current);
+            return;
+        }
+
+        if (element is MosaicStrokeElement mosaic)
+        {
+            mosaic.AddPoint(current);
             return;
         }
 
@@ -458,6 +458,59 @@ public partial class CaptureOverlayWindow : Window
         Canvas.SetTop(element, rectangle.Y);
         element.Width = rectangle.Width;
         element.Height = rectangle.Height;
+    }
+
+    private Geometry CreateArrowGeometry(WpfPoint start, WpfPoint end)
+    {
+        var head = ArrowGeometry.CalculateHead(
+            new PixelPoint(start.X, start.Y),
+            new PixelPoint(end.X, end.Y),
+            headLength: 14,
+            headWidth: 13);
+        var group = new GeometryGroup();
+        group.Children.Add(new LineGeometry(start, end));
+
+        var triangle = new StreamGeometry();
+        using (var context = triangle.Open())
+        {
+            context.BeginFigure(end, isFilled: true, isClosed: true);
+            context.LineTo(new WpfPoint(head.LeftWing.X, head.LeftWing.Y), isStroked: true, isSmoothJoin: true);
+            context.LineTo(new WpfPoint(head.RightWing.X, head.RightWing.Y), isStroked: true, isSmoothJoin: true);
+        }
+
+        group.Children.Add(triangle);
+        return group;
+    }
+
+    private BitmapSource CreatePixelatedSelection()
+    {
+        var crop = CreateDesktopCrop();
+        const double blockSize = 14;
+        var pixelWidth = Math.Max(1, (int)Math.Ceiling(crop.PixelWidth / blockSize));
+        var pixelHeight = Math.Max(1, (int)Math.Ceiling(crop.PixelHeight / blockSize));
+        var pixelated = new TransformedBitmap(
+            crop,
+            new ScaleTransform(
+                pixelWidth / (double)crop.PixelWidth,
+                pixelHeight / (double)crop.PixelHeight));
+        pixelated.Freeze();
+        return pixelated;
+    }
+
+    private BitmapSource CreateDesktopCrop()
+    {
+        var scaleX = _desktop.Image.PixelWidth / ActualWidth;
+        var scaleY = _desktop.Image.PixelHeight / ActualHeight;
+        var source = new Int32Rect(
+            (int)Math.Floor(_selection.X * scaleX),
+            (int)Math.Floor(_selection.Y * scaleY),
+            Math.Max(1, (int)Math.Round(_selection.Width * scaleX)),
+            Math.Max(1, (int)Math.Round(_selection.Height * scaleY)));
+        source.Width = Math.Min(source.Width, _desktop.Image.PixelWidth - source.X);
+        source.Height = Math.Min(source.Height, _desktop.Image.PixelHeight - source.Y);
+        var crop = new CroppedBitmap(_desktop.Image, source);
+        crop.Freeze();
+        return crop;
     }
 
     private void UpdateSelection(WpfPoint currentPoint)
