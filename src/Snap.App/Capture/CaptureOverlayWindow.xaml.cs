@@ -32,6 +32,8 @@ public partial class CaptureOverlayWindow : Window
     private AnnotationTool _activeTool;
     private FrameworkElement? _activeAnnotation;
     private Button? _activeToolButton;
+    private Color _annotationColor = Color.FromRgb(250, 81, 81);
+    private double _strokeThickness = 4;
 
     public CaptureOverlayWindow(
         ScreenCaptureService captureService,
@@ -75,6 +77,7 @@ public partial class CaptureOverlayWindow : Window
         _selection = Rect.Empty;
         _isSelecting = true;
         ActionBar.Visibility = Visibility.Collapsed;
+        ToolOptionsBar.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         SelectionHandles.Visibility = Visibility.Collapsed;
         SelectionBorder.Visibility = Visibility.Visible;
@@ -238,7 +241,49 @@ public partial class CaptureOverlayWindow : Window
             _activeToolButton.Background = new SolidColorBrush(Color.FromRgb(228, 241, 234));
             _activeTool = tool;
             AnnotationCanvas.Cursor = tool is AnnotationTool.Text ? Cursors.IBeam : Cursors.Cross;
+            ToolOptionsBar.Visibility = tool is AnnotationTool.Rectangle or AnnotationTool.Ellipse or
+                AnnotationTool.Arrow or AnnotationTool.Pen or AnnotationTool.Text
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+            PositionToolOptionsBar();
         }
+    }
+
+    private void OnColorClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string colorText } button ||
+            ColorConverter.ConvertFromString(colorText) is not Color color)
+        {
+            return;
+        }
+
+        _annotationColor = color;
+        foreach (var item in ColorPanel.Children.OfType<Button>())
+        {
+            item.Background = Brushes.Transparent;
+            item.BorderBrush = Brushes.Transparent;
+        }
+
+        button.Background = new SolidColorBrush(Color.FromRgb(236, 236, 236));
+        button.BorderBrush = new SolidColorBrush(Color.FromRgb(207, 207, 207));
+    }
+
+    private void OnStrokeSizeClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: string sizeText } || !double.TryParse(sizeText, out var thickness))
+        {
+            return;
+        }
+
+        _strokeThickness = thickness;
+        var inactive = new SolidColorBrush(Color.FromRgb(163, 163, 163));
+        ThinSizeDot.Fill = inactive;
+        MediumSizeDot.Fill = inactive;
+        ThickSizeDot.Fill = inactive;
+        var active = new SolidColorBrush(Color.FromRgb(7, 193, 96));
+        if (thickness <= 2) ThinSizeDot.Fill = active;
+        else if (thickness <= 4) MediumSizeDot.Fill = active;
+        else ThickSizeDot.Fill = active;
     }
 
     private void OnUndoClick(object sender, RoutedEventArgs e)
@@ -355,39 +400,34 @@ public partial class CaptureOverlayWindow : Window
 
     private FrameworkElement? CreateAnnotation(AnnotationTool tool, WpfPoint point)
     {
-        var stroke = new SolidColorBrush(Color.FromRgb(250, 76, 76));
+        var stroke = new SolidColorBrush(_annotationColor);
         switch (tool)
         {
             case AnnotationTool.Rectangle:
                 return PlaceAt(new WpfRectangle
                 {
                     Stroke = stroke,
-                    StrokeThickness = 3,
+                    StrokeThickness = _strokeThickness,
                     Fill = Brushes.Transparent,
                 }, point);
             case AnnotationTool.Ellipse:
                 return PlaceAt(new WpfEllipse
                 {
                     Stroke = stroke,
-                    StrokeThickness = 3,
+                    StrokeThickness = _strokeThickness,
                     Fill = Brushes.Transparent,
                 }, point);
             case AnnotationTool.Arrow:
                 return new WpfPath
                 {
                     Data = CreateArrowGeometry(point, point),
-                    Stroke = stroke,
-                    StrokeThickness = 4,
-                    StrokeStartLineCap = PenLineCap.Round,
-                    StrokeEndLineCap = PenLineCap.Round,
-                    StrokeLineJoin = PenLineJoin.Round,
                     Fill = stroke,
                 };
             case AnnotationTool.Pen:
                 var pen = new WpfPolyline
                 {
                     Stroke = stroke,
-                    StrokeThickness = 4,
+                    StrokeThickness = _strokeThickness,
                     StrokeLineJoin = PenLineJoin.Round,
                     StrokeStartLineCap = PenLineCap.Round,
                     StrokeEndLineCap = PenLineCap.Round,
@@ -462,24 +502,24 @@ public partial class CaptureOverlayWindow : Window
 
     private Geometry CreateArrowGeometry(WpfPoint start, WpfPoint end)
     {
-        var head = ArrowGeometry.CalculateHead(
+        var polygon = ArrowGeometry.CalculateFilledArrow(
             new PixelPoint(start.X, start.Y),
             new PixelPoint(end.X, end.Y),
-            headLength: 14,
-            headWidth: 13);
-        var group = new GeometryGroup();
-        group.Children.Add(new LineGeometry(start, end));
-
-        var triangle = new StreamGeometry();
-        using (var context = triangle.Open())
+            shaftWidth: _strokeThickness,
+            headLength: 18,
+            headWidth: 12 + _strokeThickness);
+        var geometry = new StreamGeometry();
+        using (var context = geometry.Open())
         {
-            context.BeginFigure(end, isFilled: true, isClosed: true);
-            context.LineTo(new WpfPoint(head.LeftWing.X, head.LeftWing.Y), isStroked: true, isSmoothJoin: true);
-            context.LineTo(new WpfPoint(head.RightWing.X, head.RightWing.Y), isStroked: true, isSmoothJoin: true);
+            var first = polygon.Points[0];
+            context.BeginFigure(new WpfPoint(first.X, first.Y), isFilled: true, isClosed: true);
+            foreach (var point in polygon.Points.Skip(1))
+            {
+                context.LineTo(new WpfPoint(point.X, point.Y), isStroked: true, isSmoothJoin: true);
+            }
         }
 
-        group.Children.Add(triangle);
-        return group;
+        return geometry;
     }
 
     private BitmapSource CreatePixelatedSelection()
@@ -598,6 +638,26 @@ public partial class CaptureOverlayWindow : Window
             : Math.Max(0, _selection.Y - height - 8);
         Canvas.SetLeft(ActionBar, left);
         Canvas.SetTop(ActionBar, top);
+        if (ToolOptionsBar.Visibility is Visibility.Visible)
+        {
+            PositionToolOptionsBar();
+        }
+    }
+
+    private void PositionToolOptionsBar()
+    {
+        ToolOptionsBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var width = ToolOptionsBar.DesiredSize.Width;
+        var height = ToolOptionsBar.DesiredSize.Height;
+        var actionLeft = Canvas.GetLeft(ActionBar);
+        var actionTop = Canvas.GetTop(ActionBar);
+        var left = Math.Clamp(actionLeft, 0, Math.Max(0, OverlayCanvas.ActualWidth - width));
+        var below = actionTop + ActionBar.DesiredSize.Height + 5;
+        var top = below + height <= OverlayCanvas.ActualHeight
+            ? below
+            : Math.Max(0, actionTop - height - 5);
+        Canvas.SetLeft(ToolOptionsBar, left);
+        Canvas.SetTop(ToolOptionsBar, top);
     }
 
     private void ResetSelection()
@@ -609,6 +669,7 @@ public partial class CaptureOverlayWindow : Window
         AnnotationCanvas.Children.Clear();
         SizeBadge.Visibility = Visibility.Collapsed;
         ActionBar.Visibility = Visibility.Collapsed;
+        ToolOptionsBar.Visibility = Visibility.Collapsed;
         SetBounds(TopShade, 0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight);
         SetBounds(LeftShade, 0, 0, 0, 0);
         SetBounds(RightShade, 0, 0, 0, 0);
