@@ -35,6 +35,10 @@ public partial class CaptureOverlayWindow : Window
     private Color _annotationColor = Color.FromRgb(250, 81, 81);
     private double _strokeThickness = 4;
     private ArrowAnnotationState? _selectedArrow;
+    private bool _isMovingArrow;
+    private WpfPoint _arrowMoveStart;
+    private WpfPoint _arrowOriginalStart;
+    private WpfPoint _arrowOriginalEnd;
 
     public CaptureOverlayWindow(
         ScreenCaptureService captureService,
@@ -323,6 +327,11 @@ public partial class CaptureOverlayWindow : Window
         if (FindParent<WpfPath>(e.OriginalSource as DependencyObject) is { Tag: ArrowAnnotationState arrow })
         {
             SelectArrow(arrow);
+            _isMovingArrow = true;
+            _arrowMoveStart = e.GetPosition(AnnotationCanvas);
+            _arrowOriginalStart = arrow.Start;
+            _arrowOriginalEnd = arrow.End;
+            AnnotationCanvas.CaptureMouse();
             e.Handled = true;
             return;
         }
@@ -375,6 +384,22 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseMove(object sender, WpfMouseEventArgs e)
     {
+        if (_isMovingArrow && _selectedArrow is not null && e.LeftButton is MouseButtonState.Pressed)
+        {
+            var current = e.GetPosition(AnnotationCanvas);
+            var translated = ArrowGeometry.TranslateWithinBounds(
+                new PixelPoint(_arrowOriginalStart.X, _arrowOriginalStart.Y),
+                new PixelPoint(_arrowOriginalEnd.X, _arrowOriginalEnd.Y),
+                current.X - _arrowMoveStart.X,
+                current.Y - _arrowMoveStart.Y,
+                new PixelRect(0, 0, AnnotationCanvas.ActualWidth, AnnotationCanvas.ActualHeight));
+            _selectedArrow.Start = new WpfPoint(translated.Start.X, translated.Start.Y);
+            _selectedArrow.End = new WpfPoint(translated.End.X, translated.End.Y);
+            UpdateArrowVisual(_selectedArrow);
+            e.Handled = true;
+            return;
+        }
+
         if (_isMovingSelection && e.LeftButton is MouseButtonState.Pressed)
         {
             var current = e.GetPosition(OverlayCanvas);
@@ -401,6 +426,14 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isMovingArrow)
+        {
+            _isMovingArrow = false;
+            AnnotationCanvas.ReleaseMouseCapture();
+            e.Handled = true;
+            return;
+        }
+
         if (_isMovingSelection)
         {
             _isMovingSelection = false;
@@ -530,7 +563,11 @@ public partial class CaptureOverlayWindow : Window
 
     private WpfPath CreateArrowAnnotation(WpfPoint point, Brush fill)
     {
-        var path = new WpfPath { Fill = fill };
+        var path = new WpfPath
+        {
+            Fill = fill,
+            Cursor = Cursors.SizeAll
+        };
         var state = new ArrowAnnotationState(path, point, point, _strokeThickness);
         path.Tag = state;
         UpdateArrowVisual(state);
@@ -789,6 +826,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void DeselectArrow()
     {
+        _isMovingArrow = false;
         _selectedArrow = null;
         ArrowEditCanvas.Visibility = Visibility.Collapsed;
     }

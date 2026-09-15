@@ -28,6 +28,22 @@ public sealed class ArrowGeometryTests
     }
 
     [Fact]
+    public void TranslateWithinBounds_ClampsWholeArrowAndPreservesVector()
+    {
+        var result = ArrowGeometry.TranslateWithinBounds(
+            new PixelPoint(10, 10),
+            new PixelPoint(30, 20),
+            deltaX: 100,
+            deltaY: 100,
+            new PixelRect(0, 0, 50, 40));
+
+        Assert.Equal(new PixelPoint(30, 30), result.Start);
+        Assert.Equal(new PixelPoint(50, 40), result.End);
+        Assert.Equal(20, result.End.X - result.Start.X);
+        Assert.Equal(10, result.End.Y - result.Start.Y);
+    }
+
+    [Fact]
     public void CalculateHead_ForHorizontalArrow_ReturnsSymmetricWings()
     {
         var result = ArrowGeometry.CalculateHead(

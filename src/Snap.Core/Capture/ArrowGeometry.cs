@@ -4,8 +4,28 @@ public readonly record struct ArrowHead(PixelPoint LeftWing, PixelPoint RightWin
 
 public sealed record ArrowPolygon(IReadOnlyList<PixelPoint> Points);
 
+public readonly record struct ArrowEndpoints(PixelPoint Start, PixelPoint End);
+
 public static class ArrowGeometry
 {
+    public static ArrowEndpoints TranslateWithinBounds(
+        PixelPoint start,
+        PixelPoint end,
+        double deltaX,
+        double deltaY,
+        PixelRect bounds)
+    {
+        var minimumX = Math.Min(start.X, end.X);
+        var maximumX = Math.Max(start.X, end.X);
+        var minimumY = Math.Min(start.Y, end.Y);
+        var maximumY = Math.Max(start.Y, end.Y);
+        var appliedX = Math.Clamp(deltaX, bounds.X - minimumX, bounds.Right - maximumX);
+        var appliedY = Math.Clamp(deltaY, bounds.Y - minimumY, bounds.Bottom - maximumY);
+        return new ArrowEndpoints(
+            new PixelPoint(start.X + appliedX, start.Y + appliedY),
+            new PixelPoint(end.X + appliedX, end.Y + appliedY));
+    }
+
     public static ArrowPolygon CalculateFilledArrow(
         PixelPoint start,
         PixelPoint end,
