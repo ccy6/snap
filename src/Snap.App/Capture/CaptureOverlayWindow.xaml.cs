@@ -1,11 +1,9 @@
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using Snap.App.Storage;
 using Snap.Core.Capture;
 using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
@@ -33,6 +31,7 @@ public partial class CaptureOverlayWindow : Window
     private Rect _moveStartSelection;
     private AnnotationTool _activeTool;
     private FrameworkElement? _activeAnnotation;
+    private Button? _activeToolButton;
 
     public CaptureOverlayWindow(
         ScreenCaptureService captureService,
@@ -149,28 +148,6 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => Close();
 
-    private void OnSaveClick(object sender, RoutedEventArgs e)
-    {
-        var image = CreateResultImage();
-        if (image is null)
-        {
-            return;
-        }
-
-        var dialog = new SaveFileDialog
-        {
-            FileName = $"Snap_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png",
-            DefaultExt = ".png",
-            Filter = "PNG 图片|*.png|JPEG 图片|*.jpg;*.jpeg",
-        };
-        if (dialog.ShowDialog(this) is true)
-        {
-            SaveImage(image, dialog.FileName);
-            _vault.Save(image);
-            Close();
-        }
-    }
-
     private void OnPinClick(object sender, RoutedEventArgs e)
     {
         var image = CreateResultImage();
@@ -252,6 +229,13 @@ public partial class CaptureOverlayWindow : Window
     {
         if (sender is Button { Tag: string toolName } && Enum.TryParse(toolName, out AnnotationTool tool))
         {
+            if (_activeToolButton is not null)
+            {
+                _activeToolButton.Background = Brushes.Transparent;
+            }
+
+            _activeToolButton = (Button)sender;
+            _activeToolButton.Background = new SolidColorBrush(Color.FromRgb(228, 241, 234));
             _activeTool = tool;
             AnnotationCanvas.Cursor = tool is AnnotationTool.Text ? Cursors.IBeam : Cursors.Cross;
         }
@@ -467,16 +451,6 @@ public partial class CaptureOverlayWindow : Window
         Canvas.SetTop(element, rectangle.Y);
         element.Width = rectangle.Width;
         element.Height = rectangle.Height;
-    }
-
-    private static void SaveImage(BitmapSource image, string filePath)
-    {
-        BitmapEncoder encoder = Path.GetExtension(filePath).Equals(".png", StringComparison.OrdinalIgnoreCase)
-            ? new PngBitmapEncoder()
-            : new JpegBitmapEncoder { QualityLevel = 95 };
-        encoder.Frames.Add(BitmapFrame.Create(image));
-        using var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read);
-        encoder.Save(stream);
     }
 
     private void UpdateSelection(WpfPoint currentPoint)
