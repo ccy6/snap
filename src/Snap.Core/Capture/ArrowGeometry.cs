@@ -6,8 +6,17 @@ public sealed record ArrowPolygon(IReadOnlyList<PixelPoint> Points);
 
 public readonly record struct ArrowEndpoints(PixelPoint Start, PixelPoint End);
 
+public readonly record struct ArrowDimensions(double ShaftWidth, double HeadLength, double HeadWidth);
+
 public static class ArrowGeometry
 {
+    public static ArrowDimensions DimensionsForSize(double size) => size switch
+    {
+        <= 2 => new ArrowDimensions(2, 18, 10),
+        <= 4 => new ArrowDimensions(6, 26, 18),
+        _ => new ArrowDimensions(10, 34, 28),
+    };
+
     public static ArrowEndpoints TranslateWithinBounds(
         PixelPoint start,
         PixelPoint end,

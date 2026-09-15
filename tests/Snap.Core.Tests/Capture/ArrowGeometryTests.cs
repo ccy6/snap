@@ -5,6 +5,14 @@ namespace Snap.Core.Tests.Capture;
 public sealed class ArrowGeometryTests
 {
     [Fact]
+    public void DimensionsForSize_MapsThreeOptionsToDistinctWeChatLikeProfiles()
+    {
+        Assert.Equal(new ArrowDimensions(2, 18, 10), ArrowGeometry.DimensionsForSize(2));
+        Assert.Equal(new ArrowDimensions(6, 26, 18), ArrowGeometry.DimensionsForSize(4));
+        Assert.Equal(new ArrowDimensions(10, 34, 28), ArrowGeometry.DimensionsForSize(7));
+    }
+
+    [Fact]
     public void CalculateFilledArrow_ForHorizontalArrow_TapersFromTailToHead()
     {
         var result = ArrowGeometry.CalculateFilledArrow(

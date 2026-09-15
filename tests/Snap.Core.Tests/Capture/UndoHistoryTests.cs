@@ -28,4 +28,22 @@ public sealed class UndoHistoryTests
         Assert.False(removed);
         Assert.Null(item);
     }
+
+    [Fact]
+    public void Remove_ExistingItem_PreservesUndoOrder()
+    {
+        var history = new UndoHistory<string>();
+        history.Push("first");
+        history.Push("selected");
+        history.Push("last");
+
+        var removed = history.Remove("selected");
+
+        Assert.True(removed);
+        Assert.Equal(2, history.Count);
+        Assert.True(history.TryPop(out var last));
+        Assert.Equal("last", last);
+        Assert.True(history.TryPop(out var first));
+        Assert.Equal("first", first);
+    }
 }

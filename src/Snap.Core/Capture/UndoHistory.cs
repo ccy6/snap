@@ -13,4 +13,28 @@ public sealed class UndoHistory<T> where T : class
     }
 
     public bool TryPop(out T? item) => _items.TryPop(out item);
+
+    public bool Remove(T item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var buffer = new Stack<T>();
+        var removed = false;
+        while (_items.TryPop(out var current))
+        {
+            if (!removed && EqualityComparer<T>.Default.Equals(current, item))
+            {
+                removed = true;
+                continue;
+            }
+
+            buffer.Push(current);
+        }
+
+        while (buffer.TryPop(out var current))
+        {
+            _items.Push(current);
+        }
+
+        return removed;
+    }
 }

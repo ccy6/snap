@@ -147,6 +147,11 @@ public partial class CaptureOverlayWindow : Window
         {
             Close();
         }
+        else if (e.Key is Key.Delete or Key.Back && _selectedArrow is not null)
+        {
+            DeleteSelectedArrow();
+            e.Handled = true;
+        }
         else if (e.Key is Key.Enter && !_selection.IsEmpty)
         {
             CompleteCapture();
@@ -576,12 +581,13 @@ public partial class CaptureOverlayWindow : Window
 
     private static Geometry CreateArrowGeometry(WpfPoint start, WpfPoint end, double shaftWidth)
     {
+        var dimensions = ArrowGeometry.DimensionsForSize(shaftWidth);
         var polygon = ArrowGeometry.CalculateFilledArrow(
             new PixelPoint(start.X, start.Y),
             new PixelPoint(end.X, end.Y),
-            shaftWidth,
-            headLength: 18,
-            headWidth: 12 + shaftWidth);
+            dimensions.ShaftWidth,
+            dimensions.HeadLength,
+            dimensions.HeadWidth);
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {
@@ -822,6 +828,20 @@ public partial class CaptureOverlayWindow : Window
         ToolOptionsBar.Visibility = Visibility.Visible;
         PositionArrowHandles();
         PositionToolOptionsBar();
+    }
+
+    private void DeleteSelectedArrow()
+    {
+        if (_selectedArrow is null)
+        {
+            return;
+        }
+
+        var path = _selectedArrow.Path;
+        AnnotationCanvas.Children.Remove(path);
+        _undoHistory.Remove(path);
+        DeselectArrow();
+        UndoButton.IsEnabled = _undoHistory.Count > 0;
     }
 
     private void DeselectArrow()
