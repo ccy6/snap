@@ -15,7 +15,12 @@ public sealed class AppSettingsTests
             () => Assert.Equal(new HotkeyGesture(HotkeyModifiers.Alt, 0x51), settings.CaptureHotkey),
             () => Assert.Null(settings.VaultHotkey),
             () => Assert.Equal(RetentionPeriod.Daily, settings.RetentionPeriod),
-            () => Assert.True(settings.StartWithWindows),
-            () => Assert.True(settings.TrayClickStartsCapture));
+            () => Assert.True(settings.StartWithWindows));
+    }
+
+    [Fact]
+    public void AppSettings_DoesNotExposeLegacyTrayClickSetting()
+    {
+        Assert.Null(typeof(AppSettings).GetProperty("TrayClickStartsCapture"));
     }
 }

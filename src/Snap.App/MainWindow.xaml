@@ -6,6 +6,7 @@
         Height="680"
         MinWidth="720"
         MinHeight="480"
+        Icon="Assets/Snap.ico"
         WindowStartupLocation="CenterScreen"
         Background="#FFF5F5F5"
         Closing="OnClosing">

@@ -14,6 +14,13 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets\Snap.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\Snap.ico" />
+    <Resource Include="Assets\Snap.png" />
+    <Resource Include="Assets\Snap.svg" />
+  </ItemGroup>
 
 </Project>

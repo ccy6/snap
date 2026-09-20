@@ -27,13 +27,34 @@ public sealed class JsonSettingsStoreTests : IDisposable
             new HotkeyGesture(HotkeyModifiers.Control | HotkeyModifiers.Shift, 0x53),
             new HotkeyGesture(HotkeyModifiers.Alt, 0x56),
             RetentionPeriod.ThirtyDays,
-            StartWithWindows: false,
-            TrayClickStartsCapture: false);
+            StartWithWindows: false);
 
         await store.SaveAsync(expected, CancellationToken.None);
         var result = await store.LoadAsync(CancellationToken.None);
 
         Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WithLegacyTrayClickSetting_IgnoresRemovedSetting()
+    {
+        Directory.CreateDirectory(_directoryPath);
+        var filePath = Path.Join(_directoryPath, "settings.json");
+        await File.WriteAllTextAsync(filePath,
+            """
+            {
+              "CaptureHotkey": { "Modifiers": 1, "VirtualKey": 81 },
+              "VaultHotkey": null,
+              "RetentionPeriod": 0,
+              "StartWithWindows": true,
+              "TrayClickStartsCapture": true
+            }
+            """);
+        var store = new JsonSettingsStore(filePath);
+
+        var result = await store.LoadAsync(CancellationToken.None);
+
+        Assert.Equal(AppSettings.CreateDefault(), result);
     }
 
     [Fact]

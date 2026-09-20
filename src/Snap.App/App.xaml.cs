@@ -8,6 +8,7 @@ using Snap.App.Storage;
 using Snap.Core.Settings;
 using Snap.Core.Hotkeys;
 using Snap.Core.Storage;
+using Snap.Core.Tray;
 
 namespace Snap.App;
 
@@ -56,12 +57,12 @@ public partial class App : System.Windows.Application
 
         _notifyIcon = new Forms.NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = LoadAppIcon(),
             Text = "Snap 截图工具",
             Visible = true,
             ContextMenuStrip = menu,
         };
-        _notifyIcon.MouseClick += OnTrayMouseClick;
+        _notifyIcon.MouseDoubleClick += OnTrayMouseDoubleClick;
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -78,19 +79,23 @@ public partial class App : System.Windows.Application
 
     private void OnCaptureHotkeyPressed(object? sender, EventArgs e) => BeginCapture();
 
-    private void OnTrayMouseClick(object? sender, Forms.MouseEventArgs e)
+    private void OnTrayMouseDoubleClick(object? sender, Forms.MouseEventArgs e)
     {
-        if (e.Button is Forms.MouseButtons.Left)
+        if (TrayActivationPolicy.ShouldOpenVault(
+                e.Button is Forms.MouseButtons.Left,
+                e.Clicks))
         {
-            if (_settings.TrayClickStartsCapture)
-            {
-                BeginCapture();
-            }
-            else
-            {
-                ShowVault();
-            }
+            ShowVault();
         }
+    }
+
+    private static Icon LoadAppIcon()
+    {
+        var resource = GetResourceStream(new Uri("pack://application:,,,/Assets/Snap.ico"))
+            ?? throw new InvalidOperationException("The Snap application icon is missing.");
+        using var stream = resource.Stream;
+        using var icon = new Icon(stream);
+        return (Icon)icon.Clone();
     }
 
     private void BeginCapture()
