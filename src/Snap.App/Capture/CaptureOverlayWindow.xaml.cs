@@ -41,6 +41,10 @@ public partial class CaptureOverlayWindow : Window
     private WpfPoint _arrowMoveStart;
     private WpfPoint _arrowOriginalStart;
     private WpfPoint _arrowOriginalEnd;
+    private System.Windows.Shapes.Shape? _selectedShape;
+    private bool _isMovingShape;
+    private WpfPoint _shapeMoveStart;
+    private PixelRect _shapeOriginalBounds;
 
     public CaptureOverlayWindow(
         ScreenCaptureService captureService,
@@ -67,6 +71,9 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (e.OriginalSource is DependencyObject source &&
+            (ActionBar.IsAncestorOf(source) || ToolOptionsBar.IsAncestorOf(source) ||
+             ReferenceEquals(source, ActionBar) || ReferenceEquals(source, ToolOptionsBar))) return;
         if (e.ClickCount == 2 && !_selection.IsEmpty && _selection.Contains(e.GetPosition(OverlayCanvas)))
         {
             CompleteCapture();
@@ -87,6 +94,7 @@ public partial class CaptureOverlayWindow : Window
         ToolOptionsBar.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         SelectionHandles.Visibility = Visibility.Collapsed;
+        DeselectShape();
         DeselectArrow();
         SelectionBorder.Visibility = Visibility.Visible;
         SizeBadge.Visibility = Visibility.Visible;
@@ -132,8 +140,8 @@ public partial class CaptureOverlayWindow : Window
             }
         }
 
-        PositionActionBar();
         ActionBar.Visibility = Visibility.Visible;
+        PositionActionBar();
         AnnotationCanvas.Visibility = Visibility.Visible;
         SelectionHandles.Visibility = Visibility.Visible;
     }
@@ -148,6 +156,14 @@ public partial class CaptureOverlayWindow : Window
         if (e.Key is Key.Escape)
         {
             Close();
+        }
+        else if (e.Key is Key.Delete or Key.Back && _selectedShape is not null)
+        {
+            AnnotationCanvas.Children.Remove(_selectedShape);
+            _undoHistory.Remove(_selectedShape);
+            DeselectShape();
+            UndoButton.IsEnabled = _undoHistory.Count > 0;
+            e.Handled = true;
         }
         else if (e.Key is Key.Delete or Key.Back && _selectedArrow is not null)
         {
@@ -253,6 +269,7 @@ public partial class CaptureOverlayWindow : Window
             _activeToolButton = (Button)sender;
             _activeToolButton.Background = new SolidColorBrush(Color.FromRgb(228, 241, 234));
             _activeTool = tool;
+            DeselectShape();
             if (tool is not AnnotationTool.Arrow)
             {
                 DeselectArrow();
@@ -293,6 +310,7 @@ public partial class CaptureOverlayWindow : Window
         {
             _selectedArrow.Path.Fill = new SolidColorBrush(color);
         }
+        if (_selectedShape is not null) _selectedShape.Stroke = new SolidColorBrush(color);
     }
 
     private void OnStrokeSizeClick(object sender, RoutedEventArgs e)
@@ -316,6 +334,7 @@ public partial class CaptureOverlayWindow : Window
             _selectedArrow.ShaftWidth = thickness;
             UpdateArrowVisual(_selectedArrow);
         }
+        if (_selectedShape is not null) _selectedShape.StrokeThickness = thickness;
     }
 
     private void OnTextSizeClick(object sender, RoutedEventArgs e)
@@ -351,6 +370,7 @@ public partial class CaptureOverlayWindow : Window
         if (_undoHistory.TryPop(out var item) && item is not null)
         {
             AnnotationCanvas.Children.Remove(item);
+            if (_selectedShape == item) DeselectShape();
             if (_selectedArrow?.Path == item)
             {
                 DeselectArrow();
@@ -365,6 +385,17 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
+        if (FindParent<System.Windows.Shapes.Shape>(e.OriginalSource as DependencyObject) is { } shape &&
+            shape is WpfRectangle or WpfEllipse && !Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))
+        {
+            SelectShape(shape);
+            _isMovingShape = true;
+            _shapeMoveStart = e.GetPosition(AnnotationCanvas);
+            _shapeOriginalBounds = new PixelRect(Canvas.GetLeft(shape), Canvas.GetTop(shape), shape.Width, shape.Height);
+            AnnotationCanvas.CaptureMouse();
+            e.Handled = true;
+            return;
+        }
         if (FindParent<WpfPath>(e.OriginalSource as DependencyObject) is { Tag: ArrowAnnotationState arrow })
         {
             SelectArrow(arrow);
@@ -377,6 +408,8 @@ public partial class CaptureOverlayWindow : Window
             return;
         }
 
+        DeselectShape();
+        DeselectArrow();
         if (_activeTool is AnnotationTool.None)
         {
             if (e.ClickCount == 2)
@@ -425,6 +458,18 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseMove(object sender, WpfMouseEventArgs e)
     {
+        if (_isMovingShape && _selectedShape is not null && e.LeftButton is MouseButtonState.Pressed)
+        {
+            var current = e.GetPosition(AnnotationCanvas);
+            var moved = AnnotationMovement.Move(_shapeOriginalBounds,
+                current.X - _shapeMoveStart.X, current.Y - _shapeMoveStart.Y,
+                new PixelRect(0, 0, AnnotationCanvas.ActualWidth, AnnotationCanvas.ActualHeight));
+            Canvas.SetLeft(_selectedShape, moved.X);
+            Canvas.SetTop(_selectedShape, moved.Y);
+            PositionShapeSelection();
+            e.Handled = true;
+            return;
+        }
         if (_isMovingArrow && _selectedArrow is not null && e.LeftButton is MouseButtonState.Pressed)
         {
             var current = e.GetPosition(AnnotationCanvas);
@@ -467,6 +512,13 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnAnnotationMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
+        if (_isMovingShape)
+        {
+            _isMovingShape = false;
+            AnnotationCanvas.ReleaseMouseCapture();
+            e.Handled = true;
+            return;
+        }
         if (_isMovingArrow)
         {
             _isMovingArrow = false;
@@ -479,8 +531,8 @@ public partial class CaptureOverlayWindow : Window
         {
             _isMovingSelection = false;
             AnnotationCanvas.ReleaseMouseCapture();
-            PositionActionBar();
             ActionBar.Visibility = Visibility.Visible;
+            PositionActionBar();
             e.Handled = true;
             return;
         }
@@ -496,6 +548,10 @@ public partial class CaptureOverlayWindow : Window
         if (_activeAnnotation is WpfPath { Tag: ArrowAnnotationState arrow })
         {
             SelectArrow(arrow);
+        }
+        else if (_activeAnnotation is WpfRectangle or WpfEllipse)
+        {
+            SelectShape((System.Windows.Shapes.Shape)_activeAnnotation);
         }
 
         UndoButton.IsEnabled = true;
@@ -514,6 +570,7 @@ public partial class CaptureOverlayWindow : Window
                     Stroke = stroke,
                     StrokeThickness = _strokeThickness,
                     Fill = Brushes.Transparent,
+                    Cursor = Cursors.SizeAll,
                 }, point);
             case AnnotationTool.Ellipse:
                 return PlaceAt(new WpfEllipse
@@ -521,6 +578,7 @@ public partial class CaptureOverlayWindow : Window
                     Stroke = stroke,
                     StrokeThickness = _strokeThickness,
                     Fill = Brushes.Transparent,
+                    Cursor = Cursors.SizeAll,
                 }, point);
             case AnnotationTool.Arrow:
                 return CreateArrowAnnotation(point, stroke);
@@ -701,7 +759,8 @@ public partial class CaptureOverlayWindow : Window
         SetBounds(ArrowEditCanvas, _selection.X, _selection.Y, _selection.Width, _selection.Height);
         PositionSelectionHandles();
         PositionArrowHandles();
-        AnnotationCanvas.Visibility = ActionBar.Visibility is Visibility.Visible
+        PositionShapeSelection();
+        AnnotationCanvas.Visibility = ActionBar.Visibility is Visibility.Visible || _isMovingSelection
             ? Visibility.Visible
             : Visibility.Collapsed;
         SizeText.Text = $"{Math.Round(_selection.Width):0} × {Math.Round(_selection.Height):0}";
@@ -757,36 +816,43 @@ public partial class CaptureOverlayWindow : Window
 
     private void PositionActionBar()
     {
+        if (_selection.IsEmpty || ActionBar.Visibility != Visibility.Visible) return;
+        var screen = GetToolbarScreenBounds();
+        var optionsVisible = ToolOptionsBar.Visibility == Visibility.Visible;
+        ActionBar.LayoutTransform = Transform.Identity;
+        ToolOptionsBar.LayoutTransform = Transform.Identity;
         ActionBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var width = ActionBar.DesiredSize.Width;
-        var height = ActionBar.DesiredSize.Height;
-        var left = Math.Clamp(_selection.Right - width, 0, Math.Max(0, OverlayCanvas.ActualWidth - width));
-        var preferredTop = _selection.Bottom + 8;
-        var top = preferredTop + height <= OverlayCanvas.ActualHeight
-            ? preferredTop
-            : Math.Max(0, _selection.Y - height - 8);
-        Canvas.SetLeft(ActionBar, left);
-        Canvas.SetTop(ActionBar, top);
-        if (ToolOptionsBar.Visibility is Visibility.Visible)
-        {
-            PositionToolOptionsBar();
-        }
+        ToolOptionsBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        var width = Math.Max(ActionBar.DesiredSize.Width, optionsVisible ? ToolOptionsBar.DesiredSize.Width : 0);
+        var height = ActionBar.DesiredSize.Height + (optionsVisible ? ToolOptionsBar.DesiredSize.Height + 5 : 0);
+        var scale = Math.Min(1, Math.Min(screen.Width / Math.Max(1, width), screen.Height / Math.Max(1, height)));
+        ActionBar.LayoutTransform = new ScaleTransform(scale, scale);
+        ToolOptionsBar.LayoutTransform = new ScaleTransform(scale, scale);
+        ActionBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        ToolOptionsBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        width = Math.Max(ActionBar.DesiredSize.Width, optionsVisible ? ToolOptionsBar.DesiredSize.Width : 0);
+        height = ActionBar.DesiredSize.Height + (optionsVisible ? ToolOptionsBar.DesiredSize.Height + 5 : 0);
+        var placement = ToolbarPlacement.Place(ToPixelRect(_selection), width, height, ToPixelRect(screen));
+        Canvas.SetLeft(ActionBar, placement.X);
+        Canvas.SetTop(ActionBar, placement.Y);
+        Canvas.SetLeft(ToolOptionsBar, placement.X);
+        Canvas.SetTop(ToolOptionsBar, placement.Y + ActionBar.DesiredSize.Height + 5);
     }
 
-    private void PositionToolOptionsBar()
+    private void PositionToolOptionsBar() => PositionActionBar();
+
+    private Rect GetToolbarScreenBounds()
     {
-        ToolOptionsBar.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-        var width = ToolOptionsBar.DesiredSize.Width;
-        var height = ToolOptionsBar.DesiredSize.Height;
-        var actionLeft = Canvas.GetLeft(ActionBar);
-        var actionTop = Canvas.GetTop(ActionBar);
-        var left = Math.Clamp(actionLeft, 0, Math.Max(0, OverlayCanvas.ActualWidth - width));
-        var below = actionTop + ActionBar.DesiredSize.Height + 5;
-        var top = below + height <= OverlayCanvas.ActualHeight
-            ? below
-            : Math.Max(0, actionTop - height - 5);
-        Canvas.SetLeft(ToolOptionsBar, left);
-        Canvas.SetTop(ToolOptionsBar, top);
+        var anchor = OverlayCanvas.PointToScreen(new WpfPoint(_selection.Right - 1, _selection.Bottom - 1));
+        var area = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point((int)anchor.X, (int)anchor.Y)).WorkingArea;
+        var topLeft = OverlayCanvas.PointFromScreen(new WpfPoint(area.Left, area.Top));
+        var bottomRight = OverlayCanvas.PointFromScreen(new WpfPoint(area.Right, area.Bottom));
+        var bounds = Rect.Intersect(new Rect(topLeft, bottomRight), new Rect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight));
+        if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
+            bounds = new Rect(0, 0, OverlayCanvas.ActualWidth, OverlayCanvas.ActualHeight);
+        var margin = Math.Min(6, Math.Min(bounds.Width, bounds.Height) / 4);
+        bounds.Inflate(-margin, -margin);
+        return bounds;
     }
 
     private void ResetSelection()
@@ -796,6 +862,7 @@ public partial class CaptureOverlayWindow : Window
         SelectionHandles.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Visibility = Visibility.Collapsed;
         AnnotationCanvas.Children.Clear();
+        DeselectShape();
         DeselectArrow();
         SizeBadge.Visibility = Visibility.Collapsed;
         ActionBar.Visibility = Visibility.Collapsed;
@@ -822,7 +889,6 @@ public partial class CaptureOverlayWindow : Window
             return;
         }
 
-        ActionBar.Visibility = Visibility.Collapsed;
         var resized = SelectionAdjustment.Resize(
             ToPixelRect(_selection),
             handle,
@@ -861,6 +927,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void SelectArrow(ArrowAnnotationState arrow)
     {
+        DeselectShape();
         _selectedText = null;
         _selectedArrow = arrow;
         ArrowEditCanvas.Visibility = Visibility.Visible;
@@ -897,6 +964,32 @@ public partial class CaptureOverlayWindow : Window
         _isMovingArrow = false;
         _selectedArrow = null;
         ArrowEditCanvas.Visibility = Visibility.Collapsed;
+    }
+
+    private void SelectShape(System.Windows.Shapes.Shape shape)
+    {
+        DeselectArrow();
+        _selectedText = null;
+        _selectedShape = shape;
+        ShapeSelectionBorder.Visibility = Visibility.Visible;
+        ToolOptionsBar.Visibility = Visibility.Visible;
+        ShowSizeOptionsForTool(shape is WpfRectangle ? AnnotationTool.Rectangle : AnnotationTool.Ellipse);
+        PositionShapeSelection();
+        PositionActionBar();
+    }
+
+    private void DeselectShape()
+    {
+        _selectedShape = null;
+        _isMovingShape = false;
+        ShapeSelectionBorder.Visibility = Visibility.Collapsed;
+    }
+
+    private void PositionShapeSelection()
+    {
+        if (_selectedShape is null) return;
+        SetBounds(ShapeSelectionBorder, _selection.X + Canvas.GetLeft(_selectedShape) - 3,
+            _selection.Y + Canvas.GetTop(_selectedShape) - 3, _selectedShape.Width + 6, _selectedShape.Height + 6);
     }
 
     private void PositionArrowHandles()

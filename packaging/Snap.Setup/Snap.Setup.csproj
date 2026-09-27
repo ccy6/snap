@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationIcon>../../src/Snap.App/Assets/Snap.ico</ApplicationIcon>
+    <AssemblyName Condition="'$(BuildUninstaller)' != 'true'">SnapSetup</AssemblyName>
+    <AssemblyName Condition="'$(BuildUninstaller)' == 'true'">SnapUninstall</AssemblyName>
+    <DefineConstants Condition="'$(BuildUninstaller)' == 'true'">$(DefineConstants);UNINSTALLER</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="$(PayloadPath)" LogicalName="payload.zip"
+                      Condition="'$(BuildUninstaller)' != 'true' and '$(PayloadPath)' != ''" />
+  </ItemGroup>
+  <Target Name="RequirePayloadForPublish" BeforeTargets="PrepareForPublish"
+          Condition="'$(BuildUninstaller)' != 'true' and !Exists('$(PayloadPath)')">
+    <Error Text="Installer payload is missing. Run scripts/build.ps1 to create the installer." />
+  </Target>
+</Project>

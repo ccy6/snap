@@ -5,5 +5,9 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Snap.Core.Tests/Snap.Core.Tests.csproj" />
+    <Project Path="tests/Snap.App.SmokeTests/Snap.App.SmokeTests.csproj" />
+  </Folder>
+  <Folder Name="/packaging/">
+    <Project Path="packaging/Snap.Setup/Snap.Setup.csproj" />
   </Folder>
 </Solution>

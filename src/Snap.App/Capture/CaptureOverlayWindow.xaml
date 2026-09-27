@@ -137,6 +137,10 @@
                 <Thumb x:Name="ArrowEndHandle" Tag="End" Style="{StaticResource ArrowEndpointStyle}" DragDelta="OnArrowHandleDragDelta" />
             </Canvas>
 
+            <Rectangle x:Name="ShapeSelectionBorder" Visibility="Collapsed"
+                       Stroke="#07C160" StrokeThickness="1" StrokeDashArray="4,3"
+                       IsHitTestVisible="False" />
+
             <Border x:Name="SizeBadge"
                     Visibility="Collapsed"
                     Padding="7,3"
