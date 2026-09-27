@@ -8,6 +8,20 @@ Snap is a Windows screenshot and annotation application for people who prefer a 
 
 Snap is an independent project, not an official WeChat or Tencent product. “WeChat-style” describes the intended workflow; Snap is not an extracted WeChat component or a complete feature-for-feature clone. The current application and installer interface is in Chinese.
 
+## Why Snap instead of keeping a chat client open?
+
+Snap focuses on screenshot work as a standalone product. Its distinguishing advantages are:
+
+- **No messaging-client dependency:** capture immediately without launching, installing, or signing in to WeChat.
+- **Purpose-built local history:** every completed capture is stored in a local capture vault with selectable daily, 7-day, or 30-day retention, while individually kept captures are protected from cleanup.
+- **Desktop pinning:** keep a reference image above other windows while continuing your work.
+- **Editable annotations:** move completed rectangles and ellipses, revise their color and line width, and adjust arrow positions and endpoints before export.
+- **Independent configurable hotkey:** change the global capture shortcut without affecting another application.
+- **Local-first operation:** capture, annotation, settings, and history stay on the computer and require no account.
+- **Open development path:** the complete C# and WPF source, automated tests, installer source, and reproducible packaging script are included. Individuals and coding agents can audit it, fork it, and build new features.
+
+Some individual screenshot features may also exist in WeChat or other tools. Snap's main product difference is that these capabilities live in an independent, local, openly extensible application.
+
 ## Project facts
 
 | Property | Value |
@@ -24,6 +38,7 @@ Snap is an independent project, not an official WeChat or Tencent product. “We
 | Installation | Self-contained `.exe` installer; no separate .NET SDK or runtime installation required |
 | Download | https://github.com/ccy6/snap/releases/latest |
 | Implementation | C#, WPF, .NET 10 |
+| License | [MIT](LICENSE): use, modify, redistribute, and build commercial or private derivatives while retaining the license notice |
 | Interface language | Chinese |
 | Scrolling screenshots | Not supported yet |
 
@@ -119,3 +134,9 @@ If the SDK is not on `PATH`, pass `-DotNet 'C:\path\to\dotnet.exe'`.
 The packaging script rebuilds `artifacts/staging` and `artifacts/release`. Distribute the installer from `artifacts/release`; generated runtimes, ZIP files, EXE files, `bin`, and `obj` do not belong in the source repository.
 
 The WPF smoke check reads the current desktop into memory to construct a capture window. It does not save or upload the desktop image.
+
+## Continue developing Snap
+
+Fork the repository and use [CONTRIBUTING.md](CONTRIBUTING.md) as the development guide. It documents the architecture, validation commands, installer pipeline, and practical extension points such as scrolling capture, OCR, localization, export settings, additional annotations, and improved mixed-DPI support.
+
+Snap is released under the [MIT License](LICENSE). You may use, copy, modify, redistribute, sublicense, or sell modified versions, including private and commercial derivatives, as long as the copyright and license notice remain with substantial copies of the software. Contributions submitted to this repository are provided under the same license.
