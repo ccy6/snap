@@ -4,6 +4,8 @@
 
 ## 使用
 
+[下载最新版 Windows 安装包](https://github.com/ccy6/snap/releases/latest)。
+
 运行安装包 `Snap-Setup-1.0.1-win-x64.exe`，安装完成后打开桌面快捷方式。
 安装包自带运行环境，安装到当前用户目录，无需管理员权限。
 
