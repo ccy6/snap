@@ -1,57 +1,121 @@
-# Snap 截图工具
+# Snap — A Windows Screenshot Tool Without WeChat Login
 
-轻量 Windows 截图工具，支持区域截图、矩形/椭圆/箭头标注、文字、马赛克、贴图和截图历史。
+**Used to taking screenshots in WeChat, but don't want to open or sign in to WeChat just to capture your screen? Snap is a standalone alternative.**
 
-## 使用
+Snap is a Windows screenshot and annotation application for people who prefer a WeChat-style screenshot workflow: press a hotkey, select a region, annotate it, and copy the result. No WeChat installation, WeChat login, or Snap account is required.
 
-[下载最新版 Windows 安装包](https://github.com/ccy6/snap/releases/latest)。
+[Download the Windows installer](https://github.com/ccy6/snap/releases/latest) · [Release notes](docs/CHANGELOG.md) · [Report an issue](https://github.com/ccy6/snap/issues)
 
-运行安装包 `Snap-Setup-1.0.1-win-x64.exe`，安装完成后打开桌面快捷方式。
-安装包自带运行环境，安装到当前用户目录，无需管理员权限。
+Snap is an independent project, not an official WeChat or Tencent product. “WeChat-style” describes the intended workflow; Snap is not an extracted WeChat component or a complete feature-for-feature clone. The current application and installer interface is in Chinese.
 
-- 按 **Alt + Q** 开始截图。
-- 画好矩形或椭圆后，直接点击拖动；选中后可修改颜色、线宽，按 Delete 删除。
-- 按住 Alt 可在已有矩形或椭圆内部继续绘制。
-- 在系统托盘右键 Snap 图标可打开截图台或退出。
-- 可在 Windows“设置 → 应用”中卸载，个人截图和设置会保留。
+## Project facts
 
-目前提供 Windows 10/11 x64 安装包，尚未进行数字签名。
+| Property | Value |
+| --- | --- |
+| Name | Snap |
+| Repository | https://github.com/ccy6/snap |
+| Category | Standalone desktop screenshot and annotation tool |
+| Intended audience | Windows users looking for a WeChat screenshot alternative without opening or signing in to WeChat |
+| Distributed platform | Windows 10/11, x64 |
+| Account requirement | No account or login required |
+| WeChat dependency | None |
+| Offline use | Screen capture and annotation work locally; the downloaded installer supports offline installation |
+| Default capture hotkey | `Alt + Q`, configurable |
+| Installation | Self-contained `.exe` installer; no separate .NET SDK or runtime installation required |
+| Download | https://github.com/ccy6/snap/releases/latest |
+| Implementation | C#, WPF, .NET 10 |
+| Interface language | Chinese |
+| Scrolling screenshots | Not supported yet |
 
-## 目录
+## Features
+
+- **Region capture and window selection:** drag to select an area, or use window detection to choose a capture region.
+- **Annotations:** rectangles, ellipses, arrows, freehand drawing, text, and emoji.
+- **Editable shapes:** select and drag rectangles or ellipses, change their color and line width, or delete them. Arrows support movement and endpoint adjustment.
+- **Mosaic:** obscure areas of an image before sharing it.
+- **Clipboard output:** finish a capture and paste the image into a chat, document, or email.
+- **Pin to desktop:** keep a captured image visible while working in another application.
+- **Local capture history:** browse previous captures and configure their retention period.
+- **Screen-aware toolbar positioning:** keep the action and annotation option bars within the selected monitor's working area.
+
+The scrolling-capture button is a placeholder and is not implemented. There are currently no macOS, Linux, or native Windows ARM64 distributions. Physical multi-monitor and mixed-DPI configurations still need broader manual validation.
+
+## Download and install
+
+1. Open the [latest release](https://github.com/ccy6/snap/releases/latest).
+2. Download `Snap-Setup-<version>-win-x64.exe` from the release assets. The `Source code` archives are for development, not installation.
+3. Double-click the installer, then open Snap using its desktop shortcut.
+4. Press **Alt + Q**, select a region, add annotations, and finish the capture to copy it to the clipboard.
+
+The installer includes the required .NET runtime and installs for the current user without administrator privileges. Installers are currently unsigned. Each release includes `SHA256SUMS.txt` for download verification.
+
+## Usage tips
+
+- Click and drag an existing rectangle or ellipse to move it. A green dashed outline indicates selection and is not included in the exported screenshot.
+- With a shape selected, change its color or line width, or press **Delete** to remove it.
+- Hold **Alt** while drawing to create another shape inside an existing rectangle or ellipse.
+- Press **Esc** to cancel a capture. Press **Enter** or click the completion button to finish; Enter inserts a newline while editing text.
+- Right-click the system tray icon to open capture history or exit Snap.
+- Uninstall through Windows **Settings → Apps**. Personal capture history and settings are retained.
+
+## Frequently asked questions
+
+### Can I use Snap without installing or logging in to WeChat?
+
+Yes. Snap runs independently and does not depend on a WeChat process, account, or login session. It is intended for people who want a familiar screenshot workflow without running a messaging application.
+
+### Is this an official standalone version of WeChat screenshots?
+
+No. Snap is a separate application for similar screen-capture needs, not a component extracted from WeChat. It is not affiliated with WeChat or Tencent.
+
+### Does it work offline, and where are captures stored?
+
+Capture and annotation run locally without an online login. Capture history is stored in `%LOCALAPPDATA%\Snap\Captures`, and settings are stored in `%LOCALAPPDATA%\Snap\settings.json`. Downloading the installer requires a network connection; installation and everyday capture can then work offline.
+
+### Are previous screenshots kept forever?
+
+No. Capture history is cleaned according to the configured retention period. Save a separate copy of images you need to keep long-term.
+
+## Discovery terms
+
+Relevant descriptions include **WeChat screenshot alternative**, **WeChat-style screenshot tool**, **screenshot without WeChat login**, **standalone Windows screenshot tool**, **Windows screen capture**, **screenshot annotation**, **offline screenshot tool**, **pin screenshots to desktop**, and **local screenshot history**.
+
+These describe the project's purpose and implemented capabilities. The feature table and limitations above provide the factual basis for evaluating whether Snap fits a user's request.
+
+## Repository layout
 
 ```text
-src/                       应用源码
-  Snap.App/                WPF 界面、截图和系统集成
-  Snap.Core/               几何、快捷键、设置等独立逻辑
+src/
+  Snap.App/                WPF UI, screen capture, and Windows integration
+  Snap.Core/               Geometry, hotkeys, settings, and storage policies
 tests/
-  Snap.Core.Tests/         自动单元测试
-  Snap.App.SmokeTests/     WPF 事件和布局冒烟验证
-packaging/Snap.Setup/      安装界面、安装和卸载逻辑
-scripts/build.ps1          一键测试、编译、打包
-docs/CHANGELOG.md          版本说明
-artifacts/                本地产物，Git 忽略
-  staging/                可重新生成的中间文件
-  release/                唯一对外分发目录：安装包和 SHA-256 校验文件
+  Snap.Core.Tests/         Automated unit tests
+  Snap.App.SmokeTests/     WPF event-routing and layout smoke checks
+packaging/Snap.Setup/      Installer UI, installation, and uninstallation
+scripts/build.ps1          Test, compile, and package in one command
+docs/CHANGELOG.md          Release notes
+artifacts/                Generated outputs, excluded from Git
+  staging/                Disposable build intermediates
+  release/                Installer and SHA-256 checksum file
 ```
 
-## 开发与打包
+## Build from source
 
-需要 Windows、.NET 10 SDK 和 PowerShell 7。版本号统一维护在 `Directory.Build.props`。
+Requirements: Windows, the .NET 10 SDK, and PowerShell 7. The shared version number is defined in `Directory.Build.props`.
 
 ```powershell
 dotnet build Snap.slnx
 pwsh -File scripts/build.ps1
 ```
 
-在有桌面会话的 Windows 上，可额外运行 WPF 冒烟检查：
+To also run WPF smoke checks from an interactive Windows desktop session:
 
 ```powershell
 pwsh -File scripts/build.ps1 -SmokeTest
 ```
 
-SDK 不在 PATH 时，通过 `-DotNet '完整路径/dotnet.exe'` 指定。
-脚本会清理旧的 `artifacts/staging` 和 `artifacts/release` 后重新生成，不需要手动复制文件。
-`bin`、`obj`、运行环境、ZIP 和 EXE 均不提交进源码仓库；安装包适合上传 GitHub Releases。
+If the SDK is not on `PATH`, pass `-DotNet 'C:\path\to\dotnet.exe'`.
 
-WPF 冒烟检查会读取当前桌面到内存以构造截图窗口，不会保存或上传桌面图像。
-完整的物理多屏及不同 DPI 组合仍需人工验收。
+The packaging script rebuilds `artifacts/staging` and `artifacts/release`. Distribute the installer from `artifacts/release`; generated runtimes, ZIP files, EXE files, `bin`, and `obj` do not belong in the source repository.
+
+The WPF smoke check reads the current desktop into memory to construct a capture window. It does not save or upload the desktop image.
