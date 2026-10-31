@@ -325,7 +325,7 @@ public partial class CaptureOverlayWindow : Window
         ThinSizeDot.Fill = inactive;
         MediumSizeDot.Fill = inactive;
         ThickSizeDot.Fill = inactive;
-        var active = new SolidColorBrush(Color.FromRgb(7, 193, 96));
+        var active = new SolidColorBrush(Color.FromRgb(65, 120, 90));
         if (thickness <= 2) ThinSizeDot.Fill = active;
         else if (thickness <= 4) MediumSizeDot.Fill = active;
         else ThickSizeDot.Fill = active;
@@ -351,7 +351,7 @@ public partial class CaptureOverlayWindow : Window
             button.Foreground = inactive;
         }
 
-        ((Button)sender).Foreground = new SolidColorBrush(Color.FromRgb(7, 193, 96));
+        ((Button)sender).Foreground = new SolidColorBrush(Color.FromRgb(65, 120, 90));
         if (_selectedText is not null)
         {
             _selectedText.FontSize = TextSizing.ToFontSize(size);

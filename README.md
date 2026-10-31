@@ -51,6 +51,8 @@ Some individual screenshot features may also exist in WeChat or other tools. Sna
 - **Clipboard output:** finish a capture and paste the image into a chat, document, or email.
 - **Pin to desktop:** keep a captured image visible while working in another application.
 - **Local capture history:** browse previous captures and configure their retention period.
+- **Full-size image preview:** double-click a history thumbnail to open the original image fitted to the window. Scroll to zoom, pin the preview above other windows, or right-click to copy, save, pin to desktop, keep, or delete the capture.
+- **Visible capture shortcut:** the capture button and settings page show the saved hotkey; select Change to record a new combination, or press Esc to cancel.
 - **Screen-aware toolbar positioning:** keep the action and annotation option bars within the selected monitor's working area.
 
 The scrolling-capture button is a placeholder and is not implemented. There are currently no macOS, Linux, or native Windows ARM64 distributions. Physical multi-monitor and mixed-DPI configurations still need broader manual validation.
@@ -71,6 +73,7 @@ The installer includes the required .NET runtime and installs for the current us
 - Hold **Alt** while drawing to create another shape inside an existing rectangle or ellipse.
 - Press **Esc** to cancel a capture. Press **Enter** or click the completion button to finish; Enter inserts a newline while editing text.
 - Right-click the system tray icon to open capture history or exit Snap.
+- Double-click a capture in history to open its preview. The light preview toolbar contains only a pin toggle and a close button; Esc also closes it. Right-click the image for capture actions.
 - Uninstall through Windows **Settings → Apps**. Personal capture history and settings are retained.
 
 ## Frequently asked questions

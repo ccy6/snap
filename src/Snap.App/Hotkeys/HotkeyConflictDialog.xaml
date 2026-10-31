@@ -6,7 +6,8 @@
         Height="245"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Background="#FFF7F7F7"
+        Background="#FFF4F3EF"
+        FontFamily="Segoe UI, Microsoft YaHei UI"
         ShowInTaskbar="False">
     <Grid Margin="26,22">
         <Grid.RowDefinitions>
@@ -28,7 +29,7 @@
                    Text="可能是微信或其他软件正在使用这个快捷键。Snap 不会在后台自动重试，请关闭 Snap 或更换一个快捷键。" />
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Width="82" Height="34" Margin="0,0,8,0" Content="关闭 Snap" Click="OnCloseSnapClick" />
-            <Button Width="104" Height="34" Content="更改快捷键" Background="#FF07C160" Foreground="White"
+            <Button Width="104" Height="34" Content="更改快捷键" Background="#FF315C43" Foreground="White"
                     BorderThickness="0" Click="OnChangeClick" />
         </StackPanel>
     </Grid>

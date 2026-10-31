@@ -22,6 +22,7 @@ public partial class MainWindow : Window
     private readonly Func<RetentionPeriod, Task> _changeRetention;
     private AppSettings _settings;
     private bool _isInitializing;
+    private bool _isRecordingHotkey;
 
     public MainWindow(
         CaptureVault vault,
@@ -73,7 +74,8 @@ public partial class MainWindow : Window
             FileName = Path.GetFileName(capture.FilePath),
             Filter = "PNG 图片|*.png",
         };
-        if (dialog.ShowDialog(this) is true)
+        var owner = sender is MenuItem { Parent: ContextMenu { PlacementTarget: Window preview } } ? preview : this;
+        if (dialog.ShowDialog(owner) is true)
         {
             File.Copy(capture.FilePath, dialog.FileName, overwrite: true);
         }
@@ -91,7 +93,7 @@ public partial class MainWindow : Window
     {
         if (GetCapture(sender) is { } capture)
         {
-            _vault.SetKept(capture.FilePath, !capture.IsKept);
+            _vault.SetKept(capture.FilePath, !_vault.IsKept(capture.FilePath));
             RefreshCaptures();
         }
     }
@@ -101,6 +103,12 @@ public partial class MainWindow : Window
         if (GetCapture(sender) is { } capture)
         {
             _vault.Delete(capture.FilePath);
+            if (!File.Exists(capture.FilePath))
+            {
+                foreach (var preview in OwnedWindows.OfType<CaptureImageWindow>()
+                    .Where(window => Equals(window.Tag, capture.FilePath)).ToArray())
+                    preview.Close();
+            }
             RefreshCaptures();
         }
     }
@@ -114,7 +122,6 @@ public partial class MainWindow : Window
     public void OpenSettings()
     {
         MainTabs.SelectedIndex = 1;
-        CaptureHotkeyBox.Focus();
     }
 
     public void UpdateSettings(AppSettings settings)
@@ -125,8 +132,20 @@ public partial class MainWindow : Window
 
     private async void OnCaptureHotkeyPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        if (!_isRecordingHotkey) return;
         e.Handled = true;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Escape)
+        {
+            FinishHotkeyRecording();
+            return;
+        }
+        if (key == Key.Tab)
+        {
+            FinishHotkeyRecording();
+            MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
+            return;
+        }
         if (key is Key.LeftAlt or Key.RightAlt or Key.LeftCtrl or Key.RightCtrl or
             Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
         {
@@ -138,8 +157,7 @@ public partial class MainWindow : Window
         var gesture = new HotkeyGesture(modifiers, virtualKey);
         if (!gesture.IsValid)
         {
-            MessageBox.Show(this, "截图快捷键需要包含 Ctrl、Alt、Shift 或 Win。", "无法设置快捷键",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            HotkeyHint.Text = "请包含 Ctrl、Alt、Shift 或 Win，Esc 取消";
             return;
         }
 
@@ -154,23 +172,75 @@ public partial class MainWindow : Window
             return;
         }
 
+        _isRecordingHotkey = false;
         if (await _changeCaptureHotkey(gesture))
         {
             _settings = _settings with { CaptureHotkey = gesture };
         }
 
-        CaptureHotkeyBox.Text = _settings.CaptureHotkey.ToDisplayString();
-        Keyboard.ClearFocus();
+        FinishHotkeyRecording();
     }
 
-    private void OnCaptureHotkeyGotFocus(object sender, KeyboardFocusChangedEventArgs e)
+    private void OnChangeHotkeyClick(object sender, RoutedEventArgs e)
     {
-        CaptureHotkeyBox.Text = "请按组合键…";
+        _isRecordingHotkey = true;
+        CaptureHotkeyBox.Focus();
+        HotkeyHint.Text = "请按新的组合键，Esc 取消";
         CaptureHotkeyBox.SelectAll();
     }
 
-    private void OnCaptureHotkeyLostFocus(object sender, KeyboardFocusChangedEventArgs e) =>
+    private void FinishHotkeyRecording()
+    {
+        _isRecordingHotkey = false;
         CaptureHotkeyBox.Text = _settings.CaptureHotkey.ToDisplayString();
+        CaptureHotkeyLabel.Text = CaptureHotkeyBox.Text;
+        HotkeyHint.Text = "全局生效 · 点击更改后录入新的组合键";
+    }
+
+    private void OnCaptureHotkeyLostFocus(object sender, KeyboardFocusChangedEventArgs e) => FinishHotkeyRecording();
+
+    private void OnOpenCaptureClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: CapturePreview capture })
+        {
+            var preview = new CaptureImageWindow(LoadImage(capture.FilePath), capture.CreatedLabel)
+            {
+                Owner = this,
+                Tag = capture.FilePath,
+                ContextMenu = CreatePreviewContextMenu(capture),
+            };
+            preview.Show();
+        }
+    }
+
+    private ContextMenu CreatePreviewContextMenu(CapturePreview capture)
+    {
+        var menu = new ContextMenu();
+        void Add(string title, RoutedEventHandler handler)
+        {
+            var item = new MenuItem { Header = title, CommandParameter = capture };
+            item.Click += handler;
+            menu.Items.Add(item);
+        }
+        Add("复制", OnCopyCaptureClick);
+        Add("另存为…", OnSaveCaptureClick);
+        Add("钉到桌面", OnPinCaptureClick);
+        menu.Items.Add(new Separator());
+        Add("保留 / 取消保留", OnToggleKeepClick);
+        var keepItem = (MenuItem)menu.Items[^1];
+        menu.Opened += (_, _) => keepItem.Header = _vault.IsKept(capture.FilePath) ? "取消保留" : "保留";
+        Add("删除", OnDeleteCaptureClick);
+        return menu;
+    }
+
+    private void OnCaptureThumbnailKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is Key.Enter or Key.Space)
+        {
+            e.Handled = true;
+            OnOpenCaptureClick(sender, e);
+        }
+    }
 
     private async void OnRetentionSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -191,13 +261,17 @@ public partial class MainWindow : Window
 
     private void ApplySettingsToControls()
     {
+        var wasInitializing = _isInitializing;
+        _isInitializing = true;
         CaptureHotkeyBox.Text = _settings.CaptureHotkey.ToDisplayString();
+        CaptureHotkeyLabel.Text = CaptureHotkeyBox.Text;
         RetentionComboBox.SelectedIndex = _settings.RetentionPeriod switch
         {
             RetentionPeriod.SevenDays => 1,
             RetentionPeriod.ThirtyDays => 2,
             _ => 0,
         };
+        _isInitializing = wasInitializing;
     }
 
     private static HotkeyModifiers ToHotkeyModifiers(ModifierKeys modifiers)

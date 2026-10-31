@@ -11,7 +11,7 @@
         MouseLeftButtonDown="OnMouseLeftButtonDown"
         MouseWheel="OnMouseWheel"
         MouseRightButtonUp="OnMouseRightButtonUp">
-    <Border BorderBrush="#33000000" BorderThickness="1" Background="White">
+    <Border BorderBrush="#FF41785A" BorderThickness="1" Background="#FFF4F3EF" ToolTip="拖动移动 · 滚轮缩放 · 右键关闭">
         <Image x:Name="PinnedImage" Stretch="Uniform" MaxWidth="900" MaxHeight="700" />
     </Border>
 </Window>
